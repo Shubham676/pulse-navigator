@@ -53,7 +53,35 @@ For a quick trial without Razorpay, set `NODE_ENV=development` and `ALLOW_TEST_C
 
 Any host that runs a Docker container next to a PostgreSQL database works. The worker runs inside the web process, so keep at least one instance always on (no scale-to-zero).
 
-**Render or Railway (simplest).** Create a PostgreSQL database, then a web service from this repository using the Dockerfile. Set the variables from `.env.example`, with `DATABASE_SSL=true` if the database requires it. Health check path: `/healthz`.
+### Recommended: GitHub → Supabase (database) → Render (app) → Cloudflare (domain)
+
+About $7/month to start: Render Starter is paid; Supabase Free and Cloudflare DNS are free.
+
+**1. GitHub.** Create a **private** repository and push this folder. `.env` is in `.gitignore`; never commit real keys.
+
+**2. Supabase (database).**
+- Create a project at supabase.com. Pick the Mumbai (ap-south-1) region and save the database password.
+- Open **Connect**, choose **Session pooler**, and copy the URI. It looks like `postgresql://postgres.xxxx:[PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:5432/postgres`. Put your password in it.
+- Use the session pooler (port 5432), not the transaction pooler (port 6543): the app uses advisory locks and row locks that need session mode.
+- The app creates all tables itself on first start. You do not run any SQL.
+- Free plan limits: 500 MB database, and the project pauses after 7 days with no activity. The app's background worker keeps it active. Move to Supabase Pro when the database nears 500 MB.
+
+**3. Render (app).**
+- On render.com: **New → Blueprint**, connect GitHub, pick the repository. Render reads `render.yaml`.
+- Fill in the blank variables: `DATABASE_URL` (the Supabase URI), `PUBLIC_URL` (your final address, e.g. `https://app.yourdomain.com`), and the Amazon, Razorpay, Anthropic and company values you have. Leave unknown ones blank and add them later under **Environment**.
+- Deploy. When the logs show the server listening, open the `onrender.com` address and sign up. The first account becomes the owner of its organisation.
+- Keep the **Starter** plan. The free plan sleeps after 15 minutes, which stops Amazon syncs and dayparting.
+- `APP_SECRET` is generated once. Never change it: it decrypts the saved Amazon keys.
+
+**4. Cloudflare (domain).**
+- In Render: the service → **Settings → Custom Domains → Add**, e.g. `app.yourdomain.com`.
+- In Cloudflare DNS: add a `CNAME` record from `app` to `your-service.onrender.com`. Wait until Render shows the domain as verified, then you can turn on the orange-cloud proxy.
+- Cloudflare → **SSL/TLS**: set the mode to **Full (strict)**.
+- Update `PUBLIC_URL` in Render to the new domain.
+
+**Other options.** Any host that runs this Docker image next to PostgreSQL works; keep one instance always on. Railway works the same way as Render. On your own server (VPS or AWS EC2 Mumbai), run `docker compose up -d --build` and put Caddy or Nginx in front for HTTPS. Cloudflare Containers can run the image only with a Worker in front and a minimum of one instance. Neon's free plan is not a good fit: the always-on worker uses up its monthly compute hours.
+
+**Not a fit:** Vercel, Cloudflare Pages or plain Workers (no long-running worker), and Google Sheets as the database (no transactions, 60 requests per minute per user).
 
 **Your own server (VPS or AWS EC2 in Mumbai, for Indian data location).** Install Docker, copy the repository and `.env`, run `docker compose up -d --build`, and put Caddy or Nginx in front for HTTPS. Back up the `pgdata` volume daily.
 

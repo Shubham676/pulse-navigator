@@ -1,0 +1,52 @@
+# Render Blueprint: Render reads this file when you choose New > Blueprint and pick this repository.
+# The database is not created here: use the Supabase connection string (see README, "Deploy").
+services:
+  - type: web
+    name: pulse
+    runtime: docker
+    plan: starter            # always on; the free plan sleeps and would stop Amazon syncs and dayparting
+    region: singapore        # closest Render region to India
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeploy: true         # every push to the main branch redeploys
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_SECRET
+        generateValue: true  # Render creates a long random secret. Never change it later: it decrypts saved Amazon keys.
+      - key: DATABASE_URL
+        sync: false          # paste the Supabase "Session pooler" connection string
+      - key: DATABASE_SSL
+        value: "true"
+      - key: DATABASE_POOL_MAX
+        value: "5"
+      - key: PUBLIC_URL
+        sync: false          # e.g. https://app.yourdomain.com
+      - key: ALLOW_SIGNUP
+        value: "true"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: AMAZON_LWA_CLIENT_ID
+        sync: false
+      - key: AMAZON_LWA_CLIENT_SECRET
+        sync: false
+      - key: AMAZON_SP_APP_ID
+        sync: false
+      - key: AMAZON_ADS_CLIENT_ID
+        sync: false
+      - key: AMAZON_ADS_CLIENT_SECRET
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: COMPANY_NAME
+        sync: false
+      - key: COMPANY_GSTIN
+        sync: false
+      - key: COMPANY_ADDRESS
+        sync: false
+      - key: COMPANY_STATE_CODE
+        sync: false
