@@ -48,6 +48,10 @@ async function schedule() {
 
 export function startWorker(log = console) {
   let stopped = false, busy = false;
+  // With a single instance (the default), a job still marked 'running' at startup was cut off by a restart: retry it now.
+  if (process.env.SINGLE_INSTANCE !== "false") {
+    q("update jobs set state='queued', updated_at=now() where state='running'").catch(e => log.error(e));
+  }
   const tick = async () => {
     if (stopped || busy) return;
     busy = true;

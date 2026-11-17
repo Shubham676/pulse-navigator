@@ -4,7 +4,8 @@ services:
   - type: web
     name: pulse
     runtime: docker
-    plan: starter            # always on; the free plan sleeps and would stop Amazon syncs and dayparting
+    plan: free               # sleeps after 15 min without traffic: keep it awake with a pinger (README, "Deploy").
+                             # Switch to "starter" ($7/month) before paying sellers rely on it.
     region: singapore        # closest Render region to India
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz

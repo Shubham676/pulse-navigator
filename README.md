@@ -55,7 +55,7 @@ Any host that runs a Docker container next to a PostgreSQL database works. The w
 
 ### Recommended: GitHub → Supabase (database) → Render (app) → Cloudflare (domain)
 
-About $7/month to start: Render Starter is paid; Supabase Free and Cloudflare DNS are free.
+Free to start: Render's free server, Supabase Free and Cloudflare DNS cost nothing. Move to Render Starter ($7/month) before paying sellers rely on it.
 
 **1. GitHub.** Create a **private** repository and push this folder. `.env` is in `.gitignore`; never commit real keys.
 
@@ -70,10 +70,17 @@ About $7/month to start: Render Starter is paid; Supabase Free and Cloudflare DN
 - On render.com: **New → Blueprint**, connect GitHub, pick the repository. Render reads `render.yaml`.
 - Fill in the blank variables: `DATABASE_URL` (the Supabase URI), `PUBLIC_URL` (your final address, e.g. `https://app.yourdomain.com`), and the Amazon, Razorpay, Anthropic and company values you have. Leave unknown ones blank and add them later under **Environment**.
 - Deploy. When the logs show the server listening, open the `onrender.com` address and sign up. The first account becomes the owner of its organisation.
-- Keep the **Starter** plan. The free plan sleeps after 15 minutes, which stops Amazon syncs and dayparting.
+- `render.yaml` uses Render's **free** server. It sleeps after 15 minutes without visitors, and while asleep Amazon syncs and dayparting stop. Step 4 keeps it awake.
+- To move to the paid server later: the service → **Settings → Instance type → Starter**. Then turn off the pinger.
+
+**4. Keep it awake (free pinger).**
+- Sign up at cron-job.org (free) and create a cron job.
+- URL: `https://<your-service>.onrender.com/healthz` (or your own domain once step 5 is done). Schedule: every 10 minutes.
+- One always-awake server uses about 744 of Render's 750 free hours a month, so keep only **one** free service in the Render workspace.
+- Render may still restart a free server now and then. The app recovers by itself: interrupted Amazon syncs are retried at startup.
 - `APP_SECRET` is generated once. Never change it: it decrypts the saved Amazon keys.
 
-**4. Cloudflare (domain).**
+**5. Cloudflare (domain).**
 - In Render: the service → **Settings → Custom Domains → Add**, e.g. `app.yourdomain.com`.
 - In Cloudflare DNS: add a `CNAME` record from `app` to `your-service.onrender.com`. Wait until Render shows the domain as verified, then you can turn on the orange-cloud proxy.
 - Cloudflare → **SSL/TLS**: set the mode to **Full (strict)**.
