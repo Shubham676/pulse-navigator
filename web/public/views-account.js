@@ -1,0 +1,77 @@
+"use strict";
+/* Data uploads, Amazon connections, wallet, copilot memory, brand settings and team. */
+const GROUP_HINT = { orders: "orders", returns: "fba_returns", ads: "ads_campaigns", coupons: "coupons", deals: "deals", repeat: "repeat", suppressed: "suppressed", transactions: "transactions", fba_inventory: "fba_inventory", product_costs: "product_costs", ads_products: "ads_products", ads_search_terms: "ads_search_terms" };
+
+VIEWS["account-data"] = arg => {
+  if (!S.imports) { loadImports(); return `<div class="empty">Loading…</div>`; }
+  const I = S.imports, focus = GROUP_HINT[arg] || arg, latest = new Map(I.latest.map(l => [l.report, l.created_at]));
+  const groups = [...new Set(I.reports.map(r => r.group))];
+  const hist = I.history.slice(0, 30);
+  return head("Upload reports", "Drop Amazon report files here. Pulse recognises each report from its columns, so you can upload several at once. Uploading the same period again updates it without double counting.", `<a class="btn" href="/api/imports/template/product-costs.csv">Product costs template</a>`)
+    + (canEdit() ? `<section class="card"><label class="drop" id="drop" for="upFiles"><input type="file" id="upFiles" multiple accept=".csv,.txt,.tsv,.xlsx"><b style="font-size:16px">Drop report files here, or click to choose</b><br><span class="note">CSV, TXT (tab-separated) or XLSX, up to 40 MB each</span></label>
+       <div class="form" style="margin-top:12px"><label class="f">Report type<select class="inp" id="upReport"><option value="">Detect automatically</option>${I.reports.map(r => `<option value="${r.id}"${r.id === focus ? " selected" : ""}>${esc(r.label)}</option>`).join("")}</select></label>
+       <label class="f">Ad type (ads reports)<select class="inp" id="upAdType"><option value="">From the file name</option><option value="SP">Sponsored Products</option><option value="SB">Sponsored Brands</option><option value="SD">Sponsored Display</option></select></label>
+       <label class="f">Period start (Business Report, Brand Analytics)<input class="inp" type="date" id="upStart"></label><label class="f">Period end<input class="inp" type="date" id="upEnd"></label></div>
+       <div id="upOut" aria-live="polite" style="margin-top:12px"></div></section>` : need("Your role can view data but not upload it.", ""))
+    + `<div class="grid g2">${groups.map(g => card(g, I.reports.filter(r => r.group === g).map(r => `<div class="metric" style="align-items:flex-start${r.id === focus ? ";background:var(--accent-soft);margin:0 -8px;padding:9px 8px;border-radius:8px" : ""}"><span><b>${esc(r.label)}</b><small>${esc(r.how)}</small></span>${latest.has(r.id) ? `<span class="pill ok" title="Last import">${fmtD(latest.get(r.id))}</span>` : `<span class="pill mut">Not yet</span>`}</div>`).join(""))).join("")}</div>`
+    + card("Import history", table([{ l: "When", left: true }, { l: "Report", left: true }, { l: "File", left: true }, "Source", "Rows read", "Rows saved", "Status", { l: "Note", left: true }], hist.map(h => [{ v: new Date(h.created_at).getTime(), h: fmtDT(h.created_at) }, I.reports.find(r => r.id === h.report)?.label || h.report, h.filename || "–", { upload: "Upload", sp_api: "Amazon API", ads_api: "Ads API" }[h.source] || h.source, N(h.rows_read), N(h.rows_saved), pill(h.status === "done" ? "Done" : "Failed", h.status === "done" ? "ok" : "bad"), { v: h.message || "", h: `<div style="white-space:normal;max-width:340px">${esc(h.message || "")}</div>` }]), { empty: "Nothing imported yet." }))
+    + (isAdmin() && hasData() ? card("Start again", `<p style="margin:0 0 10px">Delete all imported sales, ads, inventory and payment data for ${esc(S.D.org.name)}. Settings, team and wallet stay.</p><button type="button" class="btn" data-act="cleardata" style="color:var(--bad);border-color:var(--bad)">Delete imported data</button>`) : "");
+};
+async function loadImports() { try { S.imports = await api("GET", "/api/imports"); render(); } catch (e) { toast(e.message); } }
+async function uploadFiles(files) {
+  if (!files.length) return;
+  const fd = new FormData(), out = $("upOut");
+  [...files].forEach(f => fd.append("file", f, f.name));
+  const r = $("upReport").value, a = $("upAdType").value, s = $("upStart").value, e = $("upEnd").value;
+  if (r) fd.append("report", r); if (a) fd.append("adType", a); if (s) fd.append("periodStart", s); if (e) fd.append("periodEnd", e);
+  out.innerHTML = `<p><span class="spin"></span> Importing ${files.length} file${files.length > 1 ? "s" : ""}…</p>`;
+  try {
+    const res = await api("POST", "/api/imports", fd);
+    out.innerHTML = res.results.map(x => `<div class="res"><span class="pill ${x.ok ? "ok" : "bad"}">${x.ok ? "Saved" : "Failed"}</span><span><b>${esc(x.filename)}</b>${x.ok ? ` · ${esc(x.label)} · ${num(x.rowsSaved)} rows. ${esc(x.message || "")}` : `<br>${esc(x.error)}`}</span></div>`).join("");
+    S.imports = null; await reload(true); await loadImports();
+    const done = res.results.filter(x => x.ok).length; toast(`${done} of ${res.results.length} file${res.results.length > 1 ? "s" : ""} imported`);
+    if ($("upOut")) $("upOut").innerHTML = out.innerHTML;
+  } catch (err) { out.innerHTML = `<p style="color:var(--bad);font-weight:600">${esc(err.message)}</p>`; }
+}
+
+VIEWS["account-channels"] = () => {
+  if (!S.conns) { api("GET", "/api/connections").then(r => { S.conns = r; render(); }).catch(e => toast(e.message)); return `<div class="empty">Loading…</div>`; }
+  const C = S.conns, get = k => C.connections.find(c => c.kind === k), sp = get("sp_api"), ad = get("ads_api"), job = k => C.jobs.find(j => j.kind === k);
+  const status = (c, k) => !c ? `<span class="pill mut">Not connected</span>` : c.last_error ? `<span class="pill bad" title="${esc(c.last_error)}">Needs attention</span>` : job(k)?.state === "running" || job(k)?.state === "queued" ? `<span class="pill info">Syncing</span>` : `<span class="pill ok">Connected</span>`;
+  const block = (title, kind, c, jobKind, body) => card(title, `${c ? `<div class="metric"><span>Last sync</span><b>${c.last_sync_at ? fmtDT(c.last_sync_at) : "Not yet"}</b></div>${c.config?.accountName ? `<div class="metric"><span>Account</span><b>${esc(c.config.accountName)}</b></div>` : ""}${c.last_error ? `<p class="note" style="color:var(--bad)">${esc(c.last_error)}</p>` : ""}${job(jobKind)?.result && job(jobKind).state === "done" ? `<p class="note">Last result: ${esc(job(jobKind).result)}</p>` : ""}
+      <div style="display:flex;gap:8px;margin-top:10px">${canEdit() ? `<button type="button" class="btn sm pri" data-act="sync" data-id="${kind}">Sync now</button>` : ""}${isAdmin() ? `<button type="button" class="btn sm" data-act="disconnect" data-id="${kind}">Disconnect</button>` : ""}</div>` : body}`, { right: status(c, jobKind) });
+  const spForm = `<p style="margin:0 0 10px">Register as a <b>private developer</b> in Seller Central (Apps and Services > Develop Apps), create an app, and click <b>Authorize</b> to get a refresh token for your own account. Paste it with the app's LWA credentials.</p>
+    ${C.oauth.sp ? `<a class="btn pri" href="/api/connections/sp-api/oauth/start">Sign in with Amazon</a><p class="note">Or use your own developer app:</p>` : ""}
+    <form id="spForm" style="display:flex;flex-direction:column;gap:10px"><label class="f">Refresh token<input class="inp" id="spRt" placeholder="Atzr|…" autocomplete="off"></label><div class="form"><label class="f">LWA client ID<input class="inp" id="spCid" placeholder="amzn1.application-oa2-client…" autocomplete="off"></label><label class="f">LWA client secret<input class="inp" id="spCs" type="password" autocomplete="off"></label></div><div><button class="btn pri" type="submit" data-busy="Checking with Amazon"${isAdmin() ? "" : " disabled"}>Connect seller account</button></div></form>`;
+  const adForm = `<p style="margin:0 0 10px">Needs Amazon Ads API access. ${C.oauth.ads ? "Sign in below, or paste" : "Paste"} a refresh token from your Ads API app (scope advertising::campaign_management).</p>
+    ${C.oauth.ads ? `<a class="btn pri" href="/api/connections/ads-api/oauth/start">Sign in with Amazon Ads</a>` : ""}
+    <form id="adForm" style="display:flex;flex-direction:column;gap:10px;margin-top:10px"><label class="f">Refresh token<input class="inp" id="adRt" placeholder="Atzr|…" autocomplete="off"></label><div class="form"><label class="f">Client ID<input class="inp" id="adCid" autocomplete="off"></label><label class="f">Client secret<input class="inp" id="adCs" type="password" autocomplete="off"></label></div><div><button class="btn pri" type="submit" data-busy="Checking with Amazon"${isAdmin() ? "" : " disabled"}>Connect Amazon Ads</button></div></form>`;
+  return head("Amazon connections", "Connect once and Pulse pulls new data every few hours. Credentials are stored encrypted. Uploading reports by hand works alongside this.")
+    + `<div class="grid g2">${block("Amazon seller account (SP-API)", "sp-api", sp, "sp_sync", spForm)}${block("Amazon Ads", "ads-api", ad, "ads_sync", adForm)}</div>`
+    + card("What each connection pulls", `<div class="metric"><span><b>Seller account</b><small>Orders, listings, FBA stock, FBA and seller-fulfilled returns, sales and traffic, settlement reports, account health</small></span></div><div class="metric"><span><b>Amazon Ads</b><small>Daily SP, SB and SD campaign results, placements, search terms, advertised products. Pausing, enabling and budget changes are sent back to Amazon.</small></span></div><div class="metric"><span><b>Flipkart, Meesho, Myntra</b><small>Planned next. Not supported yet.</small></span></div>`);
+};
+
+VIEWS["account-wallet"] = () => {
+  if (!S.wallet) { api("GET", "/api/wallet").then(r => { S.wallet = r; render(); }).catch(e => toast(e.message)); return `<div class="empty">Loading…</div>`; }
+  const W = S.wallet, spent = -sum(W.ledger.filter(t => t.amount_paise < 0).map(t => t.amount_paise)) / 100;
+  return head("Wallet and invoices", "AI agents are paid per run from this balance. Every top-up gets a GST invoice.", isAdmin() ? `<button type="button" class="btn pri" data-act="addmoney">Add money</button>` : "")
+    + (W.payments ? "" : need("Online payments are not set up on this server yet (Razorpay keys missing).", ""))
+    + `<div class="kpis">${kpi("Balance", W.balance, null, inr, false, W.balance < 100 ? "Low balance: top up to keep agents running" : "available")}${kpi("Spent on agents", spent, null, inr, false, W.ledger.filter(t => t.kind === "agent").length + " runs")}</div>`
+    + `<div class="grid g2">${card("Transactions", table([{ l: "When", left: true }, { l: "What", left: true }, "Amount"], W.ledger.map(t => [{ v: new Date(t.created_at).getTime(), h: fmtDT(t.created_at) }, t.description, { v: t.amount_paise, h: `<b style="color:${t.amount_paise > 0 ? "var(--ok)" : "var(--ink)"}">${t.amount_paise > 0 ? "+" : "−"}${inr(Math.abs(t.amount_paise) / 100, 2)}</b>` }]), { name: "wallet", empty: "No transactions yet." }), { right: copyBtn() })}
+      ${card("GST invoices", table([{ l: "Invoice", left: true }, "Date", "Taxable value", "GST", "Total", ""], W.invoices.map(i => [i.invoice_no, fmtD(i.paid_at), N(i.credit_paise / 100, v => inr(v, 2)), N((i.amount_paise - i.credit_paise) / 100, v => inr(v, 2)), N(i.amount_paise / 100, v => inr(v, 2)), { v: "", h: `<a class="btn sm" href="/api/wallet/invoices/${encodeURIComponent(i.invoice_no)}" target="_blank" rel="noopener">Open</a>` }]), { empty: "No invoices yet." }) + `<p class="note">Add your company GSTIN in Brand and team to get it on invoices.</p>`)}</div>`;
+};
+
+VIEWS["account-memory"] = () => head("Copilot memory", "Facts Copilot uses in every answer. Keep them short and true.")
+  + card("Remembered facts", S.D.memory.map(m => `<div class="metric"><span>${esc(m.fact)}</span>${canEdit() ? `<button type="button" class="btn sm ghost" data-act="delmem" data-id="${m.id}">Remove</button>` : ""}</div>`).join("") || `<p class="note">No facts yet.</p>`)
+  + (canEdit() ? `<form id="memForm" class="card" style="display:flex;gap:8px"><input class="inp" id="memIn" maxlength="300" placeholder="e.g. Never discount the 5 kg rice below ₹1,049" aria-label="New fact"><button class="btn pri" type="submit">Add</button></form>` : "");
+
+VIEWS["account-settings"] = () => {
+  if (!S.team) { api("GET", "/api/team").then(r => { S.team = r; render(); }).catch(e => toast(e.message)); }
+  const o = S.D.org, b = o.billing || {}, T = S.team;
+  return head("Brand and team", "Settings used across Pulse, and who can see this brand.")
+    + card("Brand settings", `<form id="orgForm" class="form"><label class="f">Brand name<input class="inp" id="oName" value="${esc(o.name)}"></label><label class="f">Target ACoS (%)<input class="inp" id="oAcos" inputmode="decimal" value="${o.targetAcos}"></label><label class="f">Marketplace fee rate (%)<input class="inp" id="oFee" inputmode="decimal" value="${(o.feeRate * 100).toFixed(1)}"></label><button class="btn pri" type="submit"${isAdmin() ? "" : " disabled"}>Save</button></form><p class="note">Fee rate is the share of the selling price Amazon keeps (commission, closing and shipping fees). Pulse uses it for break-even ACoS until exact fees come from the transaction report.</p>`)
+    + card("Billing details for invoices", `<form id="billForm" class="form"><label class="f">Legal name<input class="inp" id="bName" value="${esc(b.name || "")}"></label><label class="f">GSTIN<input class="inp" id="bGst" value="${esc(b.gstin || "")}" maxlength="15"></label><label class="f">State code (e.g. 27)<input class="inp" id="bState" value="${esc(b.stateCode || "")}" maxlength="2"></label><label class="f">Address<input class="inp" id="bAddr" value="${esc(b.address || "")}"></label><button class="btn pri" type="submit"${isAdmin() ? "" : " disabled"}>Save</button></form>`)
+    + card("Team", !T ? `<p class="note">Loading…</p>` : T.members.map(m => `<div class="metric"><span><b>${esc(m.name)}</b><small>${esc(m.email)}</small></span><span style="display:flex;gap:8px;align-items:center"><span class="pill ${m.role === "owner" ? "ok" : "mut"}">${m.role}</span>${isAdmin() && m.role !== "owner" && m.id !== S.me.user.id ? `<button type="button" class="btn sm ghost" data-act="rmmember" data-id="${m.id}">Remove</button>` : ""}</span></div>`).join("")
+      + (T.invites.length ? `<p class="note" style="font-weight:700">Waiting to join: ${T.invites.map(i => `${esc(i.email)} (${i.role})`).join(", ")}</p>` : "")
+      + (isAdmin() ? `<form id="inviteForm" class="form" style="margin-top:12px"><label class="f">Email<input class="inp" id="invEmail" type="email"></label><label class="f">Role<select class="inp" id="invRole"><option value="member">Member: can upload and change ads</option><option value="viewer">Viewer: read only</option><option value="admin">Admin: also manages team and connections</option></select></label><button class="btn pri" type="submit">Create invite link</button></form><div id="invOut"></div>` : ""));
+};
