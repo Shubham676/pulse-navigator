@@ -86,6 +86,14 @@ Free to start: Render's free server, Supabase Free and Cloudflare DNS cost nothi
 - Cloudflare → **SSL/TLS**: set the mode to **Full (strict)**.
 - Update `PUBLIC_URL` in Render to the new domain.
 
+### Serving under a path: www.dumbledo.com/pulse-navigator
+
+The app runs on Render; a Cloudflare Worker (`cloudflare/worker.js`, configured by `wrangler.jsonc`) forwards `www.dumbledo.com/pulse-navigator/*` to it and leaves every other path (the Shopify store) alone.
+- In Cloudflare: Workers & Pages → **pulse-navigator** → Settings → Variables → add `ORIGIN` = the Render address (e.g. `https://pulse-navigator.onrender.com`).
+- Add the Worker routes `www.dumbledo.com/pulse-navigator*` and `dumbledo.com/pulse-navigator*` (zone dumbledo.com). The domain must use Cloudflare's nameservers, with the `www` record proxied.
+- In Render, set `PUBLIC_URL` to `https://www.dumbledo.com/pulse-navigator`.
+- The app uses relative links, and the Worker sends the path in `x-forwarded-prefix`, so login cookies are scoped to `/pulse-navigator`.
+
 **Other options.** Any host that runs this Docker image next to PostgreSQL works; keep one instance always on. Railway works the same way as Render. On your own server (VPS or AWS EC2 Mumbai), run `docker compose up -d --build` and put Caddy or Nginx in front for HTTPS. Cloudflare Containers can run the image only with a Worker in front and a minimum of one instance. Neon's free plan is not a good fit: the always-on worker uses up its monthly compute hours.
 
 **Not a fit:** Vercel, Cloudflare Pages or plain Workers (no long-running worker), and Google Sheets as the database (no transactions, 60 requests per minute per user).

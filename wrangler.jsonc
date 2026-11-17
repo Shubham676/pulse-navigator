@@ -1,0 +1,10 @@
+// Cloudflare Worker that puts Pulse Navigator at www.dumbledo.com/pulse-navigator.
+// The app itself runs on Render (see render.yaml); this Worker only forwards requests to it.
+{
+  "name": "pulse-navigator",
+  "main": "cloudflare/worker.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  // ORIGIN (the Render address) is set in the Cloudflare dashboard; keep it on every deploy
+  "keep_vars": true
+}

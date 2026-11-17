@@ -11,7 +11,7 @@ async function api(method, url, body, { raw } = {}) {
   const opts = { method, headers: { "x-pulse": "1" }, credentials: "same-origin" };
   if (body instanceof FormData) opts.body = body;
   else if (body !== undefined) { opts.headers["content-type"] = "application/json"; opts.body = JSON.stringify(body); }
-  const res = await fetch(url, opts);
+  const res = await fetch(url.replace(/^\//, ""), opts); // relative: works at / and under a path such as /pulse-navigator/
   if (raw) return res;
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && !url.startsWith("/api/auth")) { showAuth("login"); throw new Error(data.error || "Please sign in."); }

@@ -4,6 +4,12 @@ import { config } from "../config.js";
 import { randomToken, sha256 } from "./crypto.js";
 
 export const COOKIE = "pulse_session";
+
+// When served under a path (e.g. www.dumbledo.com/pulse-navigator), the Cloudflare Worker sends that prefix in this header.
+export function basePath(req) {
+  const p = req && req.headers ? String(req.headers["x-forwarded-prefix"] || "") : "";
+  return /^\/[A-Za-z0-9_-]+(\/[A-Za-z0-9_-]+)*$/.test(p) ? p : "";
+}
 const ROLE_RANK = { viewer: 0, member: 1, admin: 2, owner: 3 };
 
 export const DUMMY_HASH = bcrypt.hashSync("not-a-real-password", 11);
@@ -17,13 +23,13 @@ export class HttpError extends Error {
 export async function createSession(reply, userId, orgId) {
   const token = randomToken(32), expires = new Date(Date.now() + config.sessionDays * 864e5);
   await q("insert into sessions (token_hash, user_id, org_id, expires_at) values ($1,$2,$3,$4)", [sha256(token), userId, orgId, expires]);
-  reply.setCookie(COOKIE, token, { path: "/", httpOnly: true, sameSite: "lax", secure: config.isProd, expires });
+  reply.setCookie(COOKIE, token, { path: basePath(reply.request) || "/", httpOnly: true, sameSite: "lax", secure: config.isProd, expires });
 }
 
 export async function destroySession(req, reply) {
   const t = req.cookies[COOKIE];
   if (t) await q("delete from sessions where token_hash=$1", [sha256(t)]);
-  reply.clearCookie(COOKIE, { path: "/" });
+  reply.clearCookie(COOKIE, { path: basePath(req) || "/" });
 }
 
 // Fastify preHandler: loads the user, the current org and the user's role in it.

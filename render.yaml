@@ -2,7 +2,7 @@
 # The database is not created here: use the Supabase connection string (see README, "Deploy").
 services:
   - type: web
-    name: pulse
+    name: pulse-navigator
     runtime: docker
     plan: free               # sleeps after 15 min without traffic: keep it awake with a pinger (README, "Deploy").
                              # Switch to "starter" ($7/month) before paying sellers rely on it.

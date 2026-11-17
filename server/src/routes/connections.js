@@ -2,7 +2,7 @@ import { z } from "zod";
 import { one, many, q } from "../db.js";
 import { config } from "../config.js";
 import { encrypt, decrypt, randomToken, hmacHex, safeEqual } from "../lib/crypto.js";
-import { requireAuth, requireOrg, canAdmin, canEdit, HttpError, audit } from "../lib/auth.js";
+import { requireAuth, requireOrg, canAdmin, canEdit, HttpError, audit, basePath } from "../lib/auth.js";
 import { spClient, spCredentials } from "../amazon/spapi.js";
 import { adsClient, adsCredentials, ADS_TOKEN_URL } from "../amazon/ads.js";
 import { exchangeCode } from "../amazon/http.js";
@@ -77,7 +77,7 @@ export default async function connectionRoutes(app) {
   app.get("/api/connections/:kind/oauth/start", { preHandler: requireAuth }, async (req, reply) => {
     canAdmin(req);
     const kind = req.params.kind, nonce = randomToken(12), state = signState(req.org.id, req.user.id, nonce);
-    reply.setCookie("pulse_oauth", nonce, { path: "/api/connections", httpOnly: true, sameSite: "lax", secure: config.isProd, maxAge: 900 });
+    reply.setCookie("pulse_oauth", nonce, { path: basePath(req) + "/api/connections", httpOnly: true, sameSite: "lax", secure: config.isProd, maxAge: 900 });
     if (kind === "sp-api") {
       if (!SP_APP_ID) throw new HttpError(400, "The Pulse Amazon app is not approved yet. Use the private developer option.");
       return reply.redirect(`${SP_CONSENT}?${new URLSearchParams({ application_id: SP_APP_ID, state, redirect_uri: `${config.publicUrl}/api/connections/sp-api/oauth/callback` })}`);
@@ -91,9 +91,9 @@ export default async function connectionRoutes(app) {
 
   app.get("/api/connections/:kind/oauth/callback", async (req, reply) => {
     const s = checkState(req.query.state, req.cookies.pulse_oauth);
-    reply.clearCookie("pulse_oauth", { path: "/api/connections" });
-    if (!s) return reply.redirect("/#account-channels?error=expired");
-    if (!await one("select 1 from memberships where org_id=$1 and user_id=$2 and role in ('owner','admin')", [s.orgId, s.userId])) return reply.redirect("/#account-channels");
+    reply.clearCookie("pulse_oauth", { path: basePath(req) + "/api/connections" });
+    if (!s) return reply.redirect(basePath(req) + "/#account-channels?error=expired");
+    if (!await one("select 1 from memberships where org_id=$1 and user_id=$2 and role in ('owner','admin')", [s.orgId, s.userId])) return reply.redirect(basePath(req) + "/#account-channels");
     try {
       if (req.params.kind === "sp-api") {
         const refreshToken = await exchangeCode({ clientId: config.amazon.lwaClientId, clientSecret: config.amazon.lwaClientSecret, code: req.query.spapi_oauth_code, redirectUri: `${config.publicUrl}/api/connections/sp-api/oauth/callback` });
@@ -103,10 +103,10 @@ export default async function connectionRoutes(app) {
         const p = await pickAdsProfile(adsCredentials({ secret_enc: encrypt({ refreshToken }), config: {} }));
         await saveConnection(s.orgId, "ads_api", { profileId: p.profileId, accountName: p.accountInfo?.name || "", countryCode: p.countryCode }, { refreshToken });
       }
-      return reply.redirect("/#account-channels");
+      return reply.redirect(basePath(req) + "/#account-channels");
     } catch (e) {
       req.log.error(e);
-      return reply.redirect("/#account-channels");
+      return reply.redirect(basePath(req) + "/#account-channels");
     }
   });
 
