@@ -1,3 +1,4 @@
+import { VERSION, RELEASED } from "../version.js";
 import { z } from "zod";
 import { one, many, q, tx } from "../db.js";
 import { config } from "../config.js";
@@ -48,7 +49,7 @@ export default async function authRoutes(app) {
 
   app.get("/api/me", { preHandler: requireAuth }, async req => {
     const orgs = await many("select o.id, o.name, m.role from memberships m join orgs o on o.id=m.org_id where m.user_id=$1 order by o.name", [req.user.id]);
-    return { user: req.user, org: req.org, orgs, features: { ai: !!config.ai.apiKey, payments: !!config.razorpay.keyId, amazonApp: !!config.amazon.lwaClientId } };
+    return { user: req.user, org: req.org, orgs, features: { ai: !!config.ai.apiKey, payments: !!config.razorpay.keyId, amazonApp: !!config.amazon.lwaClientId }, app: { version: VERSION, released: RELEASED } };
   });
 
   app.post("/api/orgs", { preHandler: requireAuth }, async req => {

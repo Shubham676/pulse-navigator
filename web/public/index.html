@@ -36,20 +36,21 @@ button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 a{color:var(--accent)}
-.app{display:grid;grid-template-columns:64px 220px 1fr;height:100%}
+.app{display:grid;grid-template-columns:78px 220px 1fr;height:100%}
 /* rail */
-.rail{background:var(--ink);display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0}
+.rail{background:var(--ink);display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 0}
 :root[data-theme="dark"] .rail{background:#0B0E0D}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .rail{background:#0B0E0D}}
 .logo{width:36px;height:36px;border-radius:11px;background:var(--accent);display:grid;place-items:center;margin-bottom:12px}
 .logo svg{width:20px;height:20px}
-.rail a{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#9AA29F;text-decoration:none;position:relative}
+.rail a{width:66px;min-height:54px;padding:7px 2px 6px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#9AA29F;text-decoration:none;position:relative}
+.rail a .lbl{font-size:10.5px;line-height:1.15;font-weight:600;text-align:center;letter-spacing:.01em}
 .rail a svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .rail a:hover{background:rgba(255,255,255,.08);color:#fff}
 .rail a[aria-current="page"]{background:rgba(255,255,255,.12);color:#fff}
-.rail a[aria-current="page"]::before{content:"";position:absolute;left:-10px;top:12px;bottom:12px;width:3px;border-radius:2px;background:var(--hi)}
+.rail a[aria-current="page"]::before{content:"";position:absolute;left:-6px;top:14px;bottom:14px;width:3px;border-radius:2px;background:var(--hi)}
 .rail .tip{position:absolute;left:52px;white-space:nowrap;background:var(--ink);color:#fff;font-size:12px;padding:4px 8px;border-radius:6px;opacity:0;pointer-events:none;transition:opacity .15s;z-index:30}
-.rail a:hover .tip{opacity:1}
+.rail .tip{display:none}
 .rail .sp{flex:1}
 .avatar{width:36px;height:36px;border-radius:50%;background:var(--hi);color:#2A1B00;font-weight:700;display:grid;place-items:center;font-size:13px}
 /* side */
@@ -61,6 +62,7 @@ a{color:var(--accent)}
 .side a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:700}
 .side a .n{margin-left:auto;font-size:11.5px;background:var(--bad-soft);color:var(--bad);border-radius:999px;padding:0 7px;font-weight:700}
 .side .card{margin:16px 4px 0;padding:12px;border-radius:12px;background:var(--surface2);font-size:13px;color:var(--ink2)}
+.side .ver{margin:14px 10px 2px;font-size:11.5px;color:var(--muted);line-height:1.5}
 /* main */
 .main{display:flex;flex-direction:column;min-width:0;height:100%}
 .top{display:flex;align-items:center;gap:10px;padding:10px 22px;border-bottom:1px solid var(--line);background:var(--surface)}
@@ -288,7 +290,7 @@ svg.ch .grid line{stroke:var(--line)}
 #orgSel{max-width:200px}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}
 @keyframes sp{to{transform:rotate(360deg)}}
-@media (max-width:860px){.app{grid-template-columns:56px 1fr}.side{display:none}.top .hide-s{display:none}}
+@media (max-width:860px){.app{grid-template-columns:70px 1fr}.rail a{width:60px}.side{display:none}.top .hide-s{display:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -298,11 +300,11 @@ svg.ch .grid line{stroke:var(--line)}
 <div class="app" id="appRoot" hidden>
   <nav class="rail" aria-label="Main">
     <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg></div>
-    <a href="#copilot" data-sec="copilot" aria-label="Copilot"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/><path d="M9 11h.01M12 11h.01M15 11h.01"/></svg><span class="tip">Copilot</span></a>
-    <a href="#agents" data-sec="agents" aria-label="AI agents"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4L12 3Z"/><path d="M18 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2Z"/></svg><span class="tip">AI agents</span></a>
-    <a href="#analytics-home" data-sec="analytics" aria-label="Analytics"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V5M16 20v-6M21 20H3"/></svg><span class="tip">Analytics</span></a>
-    <a href="#ads-overview" data-sec="ads" aria-label="Ads"><svg viewBox="0 0 24 24"><path d="M4 10v4l11 5V5L4 10Z"/><path d="M15 9a3 3 0 0 1 0 6M7 14v4"/></svg><span class="tip">Ads</span></a>
-    <a href="#account-channels" data-sec="account" aria-label="Channels and account"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7.5l3 8M16 7.5l-3 8M8.5 6h7"/></svg><span class="tip">Channels and account</span></a>
+    <a href="#copilot" data-sec="copilot" aria-label="Copilot"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/><path d="M9 11h.01M12 11h.01M15 11h.01"/></svg><span class="lbl">Copilot</span></a>
+    <a href="#agents" data-sec="agents" aria-label="AI agents"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4L12 3Z"/><path d="M18 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2Z"/></svg><span class="lbl">AI agents</span></a>
+    <a href="#analytics-home" data-sec="analytics" aria-label="Analytics"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V5M16 20v-6M21 20H3"/></svg><span class="lbl">Analytics</span></a>
+    <a href="#ads-overview" data-sec="ads" aria-label="Ads"><svg viewBox="0 0 24 24"><path d="M4 10v4l11 5V5L4 10Z"/><path d="M15 9a3 3 0 0 1 0 6M7 14v4"/></svg><span class="lbl">Ads</span></a>
+    <a href="#account-channels" data-sec="account" aria-label="Channels and account"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7.5l3 8M16 7.5l-3 8M8.5 6h7"/></svg><span class="lbl">Account</span></a>
     <span class="sp"></span>
     <button class="iconbtn" id="themeBtn" type="button" aria-label="Switch light or dark" style="background:transparent;border-color:rgba(255,255,255,.15);color:#9AA29F;margin-bottom:8px"><svg viewBox="0 0 24 24"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10Z"/></svg></button>
     <button class="avatar" id="userBtn" type="button" aria-label="Account menu">··</button>

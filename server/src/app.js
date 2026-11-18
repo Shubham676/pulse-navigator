@@ -1,3 +1,4 @@
+import { VERSION, RELEASED } from "./version.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Fastify from "fastify";
@@ -63,7 +64,7 @@ export async function buildApp({ logger = true } = {}) {
     return reply.status(500).send({ error: "Something went wrong on our side. Try again; if it keeps happening, tell support what you were doing." });
   });
 
-  app.get("/healthz", async () => ({ ok: true }));
+  app.get("/healthz", async () => ({ ok: true, version: VERSION, released: RELEASED }));
   await app.register(authRoutes);
   await app.register(dataRoutes);
   await app.register(importRoutes);

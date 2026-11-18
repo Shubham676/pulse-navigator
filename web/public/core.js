@@ -127,7 +127,8 @@ function renderSide(r) {
   const n = NAV[r.sec], badge = { "ads-overview": hasData() ? openInsights().length : 0, "analytics-suppressed": SKUS.filter(s => s.suppressed).length };
   const lastOrders = S.D.imports.find(i => i.report === "orders"), lastAds = S.D.imports.find(i => i.report === "ads_campaigns");
   $("side").innerHTML = `<h1>${n.title}</h1>` + n.groups.map(([g, items]) => (g ? `<div class="grp">${g}</div>` : "") + items.map(([k, t]) => `<a href="#${k}"${k === r.h ? ' aria-current="page"' : ""}>${t}${badge[k] ? `<span class="n">${badge[k]}</span>` : ""}</a>`).join("")).join("")
-    + `<div class="card"><b>${esc(S.D.org.name)}</b><br>${lastOrders ? "Orders updated " + fmtDT(lastOrders.created_at) : "No orders data yet"}<br>${lastAds ? "Ads updated " + fmtDT(lastAds.created_at) : "No ads data yet"}<br><a href="#account-data">Add data</a></div>`;
+    + `<div class="card"><b>${esc(S.D.org.name)}</b><br>${lastOrders ? "Orders updated " + fmtDT(lastOrders.created_at) : "No orders data yet"}<br>${lastAds ? "Ads updated " + fmtDT(lastAds.created_at) : "No ads data yet"}<br><a href="#account-data">Add data</a></div>`
+    + (S.me && S.me.app ? `<div class="ver">Pulse Navigator<br>Version ${esc(S.me.app.version)}<br>Updated ${esc(new Date(S.me.app.released).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }))}</div>` : "");
   document.querySelectorAll(".rail a").forEach(a => a.dataset.sec === r.sec ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
   const t = n.groups.flatMap(g => g[1]).find(x => x[0] === r.h);
   $("crumb").innerHTML = `${n.title}${t && t[1] !== n.title ? ` <span aria-hidden="true">›</span> <b>${t[1]}</b>` : ""}`;
