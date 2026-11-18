@@ -2,6 +2,10 @@
 
 Newest first. The version and date also show at the bottom of the app's side menu.
 
+## 1.8.1 (18 Nov 2026)
+
+- Connections: logos for Amazon, Flipkart, Meesho, Myntra, AJIO, Nykaa, FirstCry, JioMart, Tata CLiQ, Snapdeal, Blinkit, Zepto, Swiggy Instamart and BigBasket (web/public/logos). Other platforms keep their letter tiles until a logo is added.
+
 ## 1.8.0 (18 Nov 2026)
 
 - Copilot and the AI agents can run on DeepSeek. Set `DEEPSEEK_API_KEY` on the server (model `deepseek-flash`; change with `AI_MODEL`). If both a Claude and a DeepSeek key are set, Claude is used unless `AI_PROVIDER=deepseek`.
