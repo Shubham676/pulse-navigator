@@ -10,7 +10,7 @@ One Node.js service serves the web app, the API and a background worker. Data li
 | Area | Status |
 | --- | --- |
 | Accounts | Sign-up, sign-in, several brands per account, team invites with owner, admin, member and viewer roles |
-| Data in | Upload of 20 Amazon report types (auto-detected from their columns), plus live sync through the Selling Partner API and the Amazon Ads API |
+| Data in | Upload of 20 Amazon report types (auto-detected from their columns), plus live sync through the Selling Partner API, the Amazon Ads API and the Shopify GraphQL Admin API (read only) |
 | Analytics | Overview with account health, 8 sales pages, 4 inventory pages, 4 business pages including profit and loss |
 | Ads | Overview with rule-based insights, campaign manager (pause, enable, budget, pushed to Amazon when Ads is connected), 7 report tabs, trackers, dayparting (runs automatically on synced campaigns), bid analysis, keyword next steps |
 | AI | Copilot answers with Claude when `ANTHROPIC_API_KEY` is set, otherwise with rules. Listing optimizer, listing creator and keyword agents use Claude |
@@ -24,6 +24,17 @@ One Node.js service serves the web app, the API and a background worker. Data li
 - **Flipkart, Meesho, Myntra** connections.
 - **Alerts by WhatsApp or email.** Alerts show in the bell panel only.
 - **Password reset by email.** Needs an email service; until then an admin removes and re-invites the person.
+
+## Connect a Shopify store
+
+Each brand connects its own store under **Account › Connections**. Nothing goes in `.env`.
+
+1. In Shopify admin: **Settings › Apps › Develop apps › Build apps in Dev Dashboard**. Create an app (e.g. "Pulse") in the same Shopify organization as the store.
+2. In the app's version, set the Admin API scopes `read_orders`, `read_all_orders` and `read_products`, then **Release**. (`read_all_orders` needs no Shopify approval for apps in the store owner's own organization; without it only the last 60 days of orders come through.)
+3. **Install** the app on the store and approve the scopes.
+4. From the app's **Settings**, copy the **Client ID** and **Client secret** into Pulse along with the store's `your-store.myshopify.com` address.
+
+Pulse exchanges these for a 24-hour access token (client credentials grant) whenever it syncs. An older admin-created custom app's `shpat_…` token also works. Code: `server/src/shopify/client.js`; API version `2026-10` (override with `SHOPIFY_API_VERSION`).
 
 ## Run it locally
 

@@ -2,6 +2,14 @@
 
 Newest first. The version and date also show at the bottom of the app's side menu.
 
+## 1.2.0 (18 Nov 2026)
+
+- Shopify connection (Account › Connections). Connect with a Shopify Dev Dashboard app's client ID and secret (client credentials grant, token renewed every 24 hours), or an older custom app's `shpat_` token. Read only.
+- Syncs every few hours: orders with line items, discounts, shipping, tax, refunds, cancellations and COD or prepaid; all product variants with price, MRP, cost and stock. First sync goes back a year (needs `read_all_orders`, otherwise 60 days); later syncs fetch only changed orders.
+- New page Analytics › Own store › Shopify store: net sales, orders, average order, COD share, daily sales, top products, payment mix, discount codes, orders by state, repeat customers, products with days of stock, recent orders.
+- Shopify SKUs that match Amazon SKUs are linked in the product master.
+- "Amazon connections" renamed "Connections".
+
 ## 1.1.1 (18 Nov 2026)
 
 - Fixed "Request failed (502)" when signing in after the app had been idle: Render's free server sleeps after 15 minutes, and requests failed while it woke up.

@@ -5,8 +5,12 @@ import { config } from "../config.js";
 
 const HANDLERS = {
   sp_sync: async (job, log) => (await import("../amazon/spapi.js")).syncSpApi(job.org_id, log),
-  ads_sync: async (job, log) => (await import("../amazon/ads.js")).syncAds(job.org_id, log)
+  ads_sync: async (job, log) => (await import("../amazon/ads.js")).syncAds(job.org_id, log),
+  shopify_sync: async (job, log) => (await import("../shopify/client.js")).syncShopify(job.org_id, log)
 };
+// connection kind -> its sync job, and back
+export const SYNC_JOB = { sp_api: "sp_sync", ads_api: "ads_sync", shopify: "shopify_sync" };
+const JOB_CONN = Object.fromEntries(Object.entries(SYNC_JOB).map(([k, v]) => [v, k]));
 
 export async function enqueue(orgId, kind, payload = {}, delayMs = 0) {
   const pending = await one("select id from jobs where org_id=$1 and kind=$2 and state in ('queued','running')", [orgId, kind]);
@@ -24,7 +28,7 @@ async function claim() {
 async function runOne(log) {
   const job = await claim();
   if (!job) return false;
-  const conn = job.kind === "sp_sync" ? "sp_api" : job.kind === "ads_sync" ? "ads_api" : null;
+  const conn = JOB_CONN[job.kind] || null;
   try {
     const out = await HANDLERS[job.kind](job, m => log.info(m));
     await q("update jobs set state='done', result=$2, updated_at=now() where id=$1", [job.id, Array.isArray(out) ? out.join("; ").slice(0, 2000) : "done"]);
@@ -41,7 +45,7 @@ async function runOne(log) {
 // Queues a sync for every connection whose last sync is older than SYNC_EVERY_HOURS
 async function schedule() {
   const due = await many(`select org_id, kind from connections where status <> 'disabled' and (last_sync_at is null or last_sync_at < now() - ($1 || ' hours')::interval)`, [String(config.syncEveryHours)]);
-  for (const c of due) await enqueue(c.org_id, c.kind === "sp_api" ? "sp_sync" : "ads_sync");
+  for (const c of due) if (SYNC_JOB[c.kind]) await enqueue(c.org_id, SYNC_JOB[c.kind]);
   // a job left 'running' by a crashed process is released after an hour
   await q("update jobs set state='queued', updated_at=now() where state='running' and updated_at < now() - interval '1 hour'");
 }
