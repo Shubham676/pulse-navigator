@@ -18,7 +18,7 @@ async function applyInsight(i, btn) {
   const r = i.act === "neg" ? await act(() => api("POST", "/api/ads/negatives", { campaignId: i.c.id, keywords: i.terms }), btn)
     : await act(() => api("POST", `/api/ads/campaigns/${encodeURIComponent(i.c.id)}`, { ...body, reason: i.label }), btn);
   if (!r) return;
-  toast(r.pushed ? `${i.label}: sent to Amazon` : r.error ? `Saved in Pulse, but Amazon refused it: ${r.error}` : `${i.label}: saved in Pulse. Make the same change in Amazon Ads, or connect Ads to do it automatically.`);
+  toast(r.pushed ? `${i.label}: sent to Amazon` : r.error ? `Saved in Pulse Navigator, but Amazon refused it: ${r.error}` : `${i.label}: saved in Pulse Navigator. Make the same change in Amazon Ads, or connect Ads to do it automatically.`);
   await reload(true);
 }
 
@@ -40,7 +40,7 @@ async function topUp(amount, btn) {
   if (r.credited) { closeModal(); toast(`${inr(amount)} added`); S.wallet = null; await reload(true); return; }
   await new Promise((res, rej) => { if (window.Razorpay) return res(); const s = document.createElement("script"); s.src = "https://checkout.razorpay.com/v1/checkout.js"; s.onload = res; s.onerror = () => rej(new Error("Could not load the payment window. Check your connection.")); document.head.appendChild(s); }).catch(e => toast(e.message));
   if (!window.Razorpay) return;
-  const rz = new window.Razorpay({ key: r.keyId, order_id: r.orderId, amount: r.amountPaise, currency: "INR", name: "Pulse", description: `Wallet top-up ${inr(amount)} + GST`, prefill: { email: S.me.user.email, name: S.me.user.name },
+  const rz = new window.Razorpay({ key: r.keyId, order_id: r.orderId, amount: r.amountPaise, currency: "INR", name: "Pulse Navigator", description: `Wallet top-up ${inr(amount)} + GST`, prefill: { email: S.me.user.email, name: S.me.user.name },
     handler: async p => { const v = await act(() => api("POST", "/api/wallet/verify", p), null); if (v) { closeModal(); toast(`${inr(amount)} added. Invoice ${v.invoiceNo}`); S.wallet = null; await reload(true); } },
     theme: { color: "#0E6B62" } });
   rz.on("payment.failed", e => toast(`Payment failed: ${e.error?.description || "try again"}`));
@@ -101,7 +101,7 @@ document.addEventListener("click", async e => {
     case "cleardata": confirmModal("Delete imported data?", `<p style="margin:0 0 10px">All sales, ads, inventory, returns and payment data for ${esc(S.D.org.name)} will be deleted. This cannot be undone.</p><label class="f">Type DELETE to confirm<input class="inp" id="delConfirm" autocomplete="off"></label>`, "Delete data", async btn => { if (await act(() => api("POST", "/api/imports/clear", { confirm: $("delConfirm").value }), btn, "Data deleted")) { closeModal(); S.imports = null; await reload(); } }); break;
     case "shoprefresh": S.shop = null; render(); break;
     case "sync": if (await act(() => api("POST", `/api/connections/${d.id}/sync`), b, r => r.queued ? "Sync started. New data appears in a few minutes." : "A sync is already running.")) { S.conns = null; S.shop = null; render(); } break;
-    case "disconnect": confirmModal("Disconnect?", `<p style="margin:0">Pulse stops pulling data from this account. Data already imported stays.</p>`, "Disconnect", async btn => { if (await act(() => api("DELETE", `/api/connections/${d.id}`), btn, "Disconnected")) { closeModal(); S.conns = null; S.shop = null; render(); } }); break;
+    case "disconnect": confirmModal("Disconnect?", `<p style="margin:0">Pulse Navigator stops pulling data from this account. Data already imported stays.</p>`, "Disconnect", async btn => { if (await act(() => api("DELETE", `/api/connections/${d.id}`), btn, "Disconnected")) { closeModal(); S.conns = null; S.shop = null; render(); } }); break;
     case "delmem": if (await act(() => api("DELETE", `/api/memory/${d.id}`))) await reload(true); break;
     case "rmmember": confirmModal("Remove from brand?", `<p style="margin:0">They lose access to ${esc(S.D.org.name)} straight away.</p>`, "Remove", async btn => { if (await act(() => api("DELETE", `/api/team/${d.id}`), btn, "Removed")) { closeModal(); S.team = null; render(); } }); break;
     case "ordpage": S.ordF.page = Math.max(1, Number(d.p)); render(); $("work")?.scrollTo?.({ top: 0 }); break;
@@ -142,8 +142,8 @@ document.addEventListener("change", async e => {
     render();
     return;
   }
-  if (d.camp) { const c = CAMPAIGNS.find(x => x.id === d.camp), status = t.checked ? "Live" : "Paused"; const r = await act(() => api("POST", `/api/ads/campaigns/${encodeURIComponent(c.id)}`, { status })); if (r) { toast(r.pushed ? `${c.name} ${status === "Live" ? "switched on" : "paused"} on Amazon` : r.error ? `Saved in Pulse; Amazon refused: ${r.error}` : `${c.name} marked ${status === "Live" ? "on" : "paused"} in Pulse`); await reload(true); } else t.checked = !t.checked; return; }
-  if (d.budget) { const c = CAMPAIGNS.find(x => x.id === d.budget), v = Math.round(+t.value); if (!(v > 0)) { t.value = c.budget || ""; toast("Enter a budget above zero"); return; } const r = await act(() => api("POST", `/api/ads/campaigns/${encodeURIComponent(c.id)}`, { budget: v })); if (r) { toast(r.pushed ? `Budget set to ${inr(v)} on Amazon` : `Budget saved in Pulse as ${inr(v)}`); await reload(true); } return; }
+  if (d.camp) { const c = CAMPAIGNS.find(x => x.id === d.camp), status = t.checked ? "Live" : "Paused"; const r = await act(() => api("POST", `/api/ads/campaigns/${encodeURIComponent(c.id)}`, { status })); if (r) { toast(r.pushed ? `${c.name} ${status === "Live" ? "switched on" : "paused"} on Amazon` : r.error ? `Saved in Pulse Navigator; Amazon refused: ${r.error}` : `${c.name} marked ${status === "Live" ? "on" : "paused"} in Pulse Navigator`); await reload(true); } else t.checked = !t.checked; return; }
+  if (d.budget) { const c = CAMPAIGNS.find(x => x.id === d.budget), v = Math.round(+t.value); if (!(v > 0)) { t.value = c.budget || ""; toast("Enter a budget above zero"); return; } const r = await act(() => api("POST", `/api/ads/campaigns/${encodeURIComponent(c.id)}`, { budget: v })); if (r) { toast(r.pushed ? `Budget set to ${inr(v)} on Amazon` : `Budget saved in Pulse Navigator as ${inr(v)}`); await reload(true); } return; }
   if (d.tracker) { if (await act(() => api("PATCH", `/api/ads/trackers/${d.tracker}`, { enabled: t.checked }))) await reload(true); return; }
   if (t.id === "toolSel" && t.value) { openAgent(t.value); t.value = ""; return; }
   if (t.id === "projFrom") { S.projFrom = +t.value; render(); return; }

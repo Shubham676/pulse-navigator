@@ -1,5 +1,5 @@
 "use strict";
-/* Pulse Seller Platform: shared state, API calls, data shaping, navigation and UI helpers. */
+/* Pulse Navigator: shared state, API calls, data shaping, navigation and UI helpers. */
 const $ = id => document.getElementById(id);
 const sum = a => a.reduce((x, y) => x + (Number(y) || 0), 0);
 const S = { me: null, D: null, period: "W", favs: {}, agentFilter: "All", agentQ: "", insFilter: "All", campFilter: "All", campQ: "", rep: { type: "SP", tab: "Campaign" },
@@ -176,11 +176,11 @@ async function reload(silent) {
 /* ---------- sign in / sign up ---------- */
 function showAuth(mode, extra = {}) {
   $("appRoot").hidden = true; $("boot").hidden = true; const a = $("auth"); a.hidden = false;
-  const inviteNote = extra.invite ? `<p>You've been invited to a brand on Pulse. ${mode === "invite-new" ? "Create your account to join." : "Sign in to accept."}</p>` : "";
+  const inviteNote = extra.invite ? `<p>You've been invited to a brand on Pulse Navigator. ${mode === "invite-new" ? "Create your account to join." : "Sign in to accept."}</p>` : "";
   const f = (id, label, type = "text", ac = "") => `<label class="f">${label}<input class="inp" id="${id}" type="${type}" autocomplete="${ac}" required></label>`;
-  const body = mode === "signup" ? `<h1>Create your Pulse account</h1><p>Free to start. You can add your team later.</p>${f("auName", "Your name", "text", "name")}${f("auBrand", "Brand name")}${f("auEmail", "Work email", "email", "email")}${f("auPw", "Password (10+ characters)", "password", "new-password")}<p class="err" id="auErr"></p><button class="btn pri" type="submit">Create account</button><p>Already have an account? <a href="#" data-auth="login">Sign in</a></p>`
+  const body = mode === "signup" ? `<h1>Create your Pulse Navigator account</h1><p>Free to start. You can add your team later.</p>${f("auName", "Your name", "text", "name")}${f("auBrand", "Brand name")}${f("auEmail", "Work email", "email", "email")}${f("auPw", "Password (10+ characters)", "password", "new-password")}<p class="err" id="auErr"></p><button class="btn pri" type="submit">Create account</button><p>Already have an account? <a href="#" data-auth="login">Sign in</a></p>`
     : mode === "invite-new" ? `<h1>Join your team</h1>${inviteNote}${f("auName", "Your name", "text", "name")}${f("auPw", "Choose a password (10+ characters)", "password", "new-password")}<p class="err" id="auErr"></p><button class="btn pri" type="submit">Join</button><p>Already have an account? <a href="#" data-auth="invite-login">Sign in</a></p>`
-      : `<h1>Sign in to Pulse</h1>${inviteNote}${f("auEmail", "Email", "email", "email")}${f("auPw", "Password", "password", "current-password")}<p class="err" id="auErr"></p><button class="btn pri" type="submit">Sign in</button>${extra.invite ? "" : `<p>New to Pulse? <a href="#" data-auth="signup">Create an account</a></p>`}`;
+      : `<h1>Sign in to Pulse Navigator</h1>${inviteNote}${f("auEmail", "Email", "email", "email")}${f("auPw", "Password", "password", "current-password")}<p class="err" id="auErr"></p><button class="btn pri" type="submit">Sign in</button>${extra.invite ? "" : `<p>New to Pulse Navigator? <a href="#" data-auth="signup">Create an account</a></p>`}`;
   a.innerHTML = `<form class="authcard" id="authForm" data-mode="${mode}" novalidate><div class="logo" aria-hidden="true" style="width:40px;height:40px;border-radius:12px;background:var(--accent);display:grid;place-items:center"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg></div>${body}</form>`;
   const first = a.querySelector("input"); if (first) first.focus();
 }

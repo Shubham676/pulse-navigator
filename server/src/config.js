@@ -48,7 +48,7 @@ export const config = {
     webhookSecret: env.RAZORPAY_WEBHOOK_SECRET || ""
   },
   company: {
-    name: env.COMPANY_NAME || "Pulse",
+    name: env.COMPANY_NAME || "Pulse Navigator",
     gstin: env.COMPANY_GSTIN || "",
     address: env.COMPANY_ADDRESS || "",
     stateCode: env.COMPANY_STATE_CODE || ""

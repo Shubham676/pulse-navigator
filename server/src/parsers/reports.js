@@ -1,4 +1,4 @@
-// Every report Pulse understands: how to recognise it from its column headers, and how to save it.
+// Every report Pulse Navigator understands: how to recognise it from its column headers, and how to save it.
 // The same save functions are used for manual uploads and for files pulled through the Amazon APIs.
 import { bulkUpsert } from "../db.js";
 import { money, int, parseDate, istDay, yes, hash, pick, pickRe } from "./util.js";
@@ -270,7 +270,7 @@ export const REPORTS = [
   },
   {
     id: "ads_products", label: "Ads: advertised product report", group: "Advertising",
-    how: "Amazon Ads console > Sponsored ads reports > Advertised product. Tells Pulse which product each campaign promotes.",
+    how: "Amazon Ads console > Sponsored ads reports > Advertised product. Tells Pulse Navigator which product each campaign promotes.",
     detect: h => has(h, "campaignname") && any(h, "advertisedsku", "advertisedasin"),
     async save(c, orgId, rows, opts) {
       const type = adTypeOf(opts, opts.headers);
@@ -411,8 +411,8 @@ export const REPORTS = [
     }
   },
   {
-    id: "product_costs", label: "Product costs and details (Pulse template)", group: "Your data",
-    how: "Download the Pulse template, fill in cost per unit for each SKU (and category, rating, reviews or stock if you like), and upload it.",
+    id: "product_costs", label: "Product costs and details (Pulse Navigator template)", group: "Your data",
+    how: "Download the Pulse Navigator template, fill in cost per unit for each SKU (and category, rating, reviews or stock if you like), and upload it.",
     detect: h => any(h, "sku", "sellersku") && any(h, "cogs", "costperunit", "unitcost", "landedcost", "cost"),
     async save(c, orgId, rows) {
       await touchProducts(c, orgId, rows.map(r => ({ sku: pick(r, "sku", "sellersku"), name: pick(r, "name", "productname", "title") })));

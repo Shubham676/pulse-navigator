@@ -18,7 +18,7 @@ export const AGENTS = [
 ];
 const IMAGE_READY = !!process.env.IMAGE_PROVIDER;   // set when an image-generation service is integrated
 
-const COPILOT_SYSTEM = `You are Pulse Copilot, an assistant for Indian sellers on Amazon. You answer from the seller's data summary below and their saved facts.
+const COPILOT_SYSTEM = `You are Pulse Navigator Copilot, an assistant for Indian sellers on Amazon. You answer from the seller's data summary below and their saved facts.
 Rules: be short and specific (under 160 words unless asked for more). Use rupees with Indian digit grouping. Lead with the answer, then up to three numbered actions.
 Only use numbers that are in the data summary; if something is not in it, say which report would provide it. Never invent figures.
 Do not give legal or tax advice beyond pointing to the report or a CA. Match the user's language (English, Hinglish or Hindi).`;
@@ -48,7 +48,7 @@ export default async function aiRoutes(app) {
     if (aiEnabled()) {
       try {
         const memory = (await many("select fact from copilot_memory where org_id=$1 order by id", [req.org.id])).map(m => "- " + m.fact).join("\n");
-        const r = await complete({ system: `${COPILOT_SYSTEM}\n\nSaved facts about this business:\n${memory || "- none"}\n\nData summary (computed by Pulse just now):\n${b.facts}\n\nPreferred language: ${b.language || "English"}`,
+        const r = await complete({ system: `${COPILOT_SYSTEM}\n\nSaved facts about this business:\n${memory || "- none"}\n\nData summary (computed by Pulse Navigator just now):\n${b.facts}\n\nPreferred language: ${b.language || "English"}`,
           messages: [...history.reverse().map(h => ({ role: h.role, content: h.content })), { role: "user", content: b.message }] });
         message = { role: "assistant", content: r.text, meta: { source: "ai", acts: b.fallback.acts, think: ["Read your latest sales, ads, stock and returns summary", "Applied your saved facts"] } };
       } catch (e) { req.log.warn(e.message); }

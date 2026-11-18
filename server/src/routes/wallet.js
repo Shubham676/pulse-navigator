@@ -39,7 +39,7 @@ export default async function walletRoutes(app) {
     const b = z.object({ amount: z.number().int().min(100, "The smallest top-up is ₹100.").max(100000) }).parse(req.body);
     const credit = b.amount * 100, total = Math.round(credit * (1 + GST));
     if (!payEnabled()) {
-      if (!testCredit()) throw new HttpError(400, "Online payments are not set up yet. Ask the Pulse team to add Razorpay keys.");
+      if (!testCredit()) throw new HttpError(400, "Online payments are not set up yet. Ask the Pulse Navigator team to add Razorpay keys.");
       const id = "test_" + Date.now();
       await q("insert into payments (order_id, org_id, amount_paise, credit_paise) values ($1,$2,$3,$4)", [id, req.org.id, total, credit]);
       await creditPayment(id, id);
@@ -95,7 +95,7 @@ export default async function walletRoutes(app) {
     return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Invoice ${e(p.invoice_no)}</title><style>body{font:14px/1.5 system-ui,sans-serif;color:#1b1f1e;max-width:760px;margin:32px auto;padding:0 16px}h1{font-size:22px;margin:0 0 4px}table{width:100%;border-collapse:collapse;margin:18px 0}td,th{border-bottom:1px solid #ddd;padding:8px;text-align:left}td.r,th.r{text-align:right}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}small{color:#666}</style></head><body>
       <h1>Tax invoice</h1><small>Invoice ${e(p.invoice_no)} · ${new Date(p.paid_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })} · Payment ${e(p.payment_id)}</small>
       <div class="grid" style="margin-top:18px"><div><b>From</b><br>${e(C.name)}<br>${e(C.address)}<br>GSTIN: ${e(C.gstin || "not set")}</div><div><b>To</b><br>${e(p.billing_name || p.name)}<br>${e(p.billing_address || "")}<br>GSTIN: ${e(p.billing_gstin || "unregistered")}</div></div>
-      <table><thead><tr><th>Description</th><th>SAC</th><th class="r">Amount</th></tr></thead><tbody><tr><td>Pulse wallet credit for AI agent runs</td><td>${e(process.env.COMPANY_SAC || "998314")}</td><td class="r">${r(taxable)}</td></tr>
+      <table><thead><tr><th>Description</th><th>SAC</th><th class="r">Amount</th></tr></thead><tbody><tr><td>Pulse Navigator wallet credit for AI agent runs</td><td>${e(process.env.COMPANY_SAC || "998314")}</td><td class="r">${r(taxable)}</td></tr>
       ${intra ? `<tr><td>CGST 9%</td><td></td><td class="r">${r(tax / 2)}</td></tr><tr><td>SGST 9%</td><td></td><td class="r">${r(tax / 2)}</td></tr>` : `<tr><td>IGST 18%</td><td></td><td class="r">${r(tax)}</td></tr>`}
       <tr><th>Total paid</th><th></th><th class="r">${r(p.amount_paise / 100)}</th></tr></tbody></table><small>Use your browser's print option to save this invoice as a PDF.</small></body></html>`;
   });

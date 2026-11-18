@@ -2,6 +2,10 @@
 
 Newest first. The version and date also show at the bottom of the app's side menu.
 
+## 1.7.1 (18 Nov 2026)
+
+- The app is now called Pulse Navigator everywhere it shows a name: browser tab, loading screen, sign-in and sign-up, invites, Copilot, messages, the Razorpay checkout and wallet invoices.
+
 ## 1.7.0 (18 Nov 2026)
 
 - Profit and loss: new "Product costs" section. For each product enter raw material, packaging and marketing cost per unit. Bundles: pick the products in the bundle with quantities, plus the bundle's own packaging, raw material and marketing. A bundle's cost adds up its products' costs (from this section, or Product master when a product has none here).

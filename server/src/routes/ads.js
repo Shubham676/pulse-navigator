@@ -75,7 +75,7 @@ export default async function adsRoutes(app) {
 }
 
 // Run by the worker every few minutes: pauses synced campaigns in their off hours and switches back on
-// only the ones Pulse paused.
+// only the ones Pulse Navigator paused.
 export async function runDayparts(log = () => {}) {
   const now = new Date(Date.now() + 330 * 6e4), hour = now.getUTCHours(), dow = now.getUTCDay(), weekend = dow === 0 || dow === 6;
   const rows = await many(`select d.org_id, d.days, d.hours_off, c.* from dayparts d join campaigns c on c.org_id=d.org_id and c.campaign_id=d.campaign_id where c.remote`);

@@ -68,7 +68,7 @@ export const PLATFORMS = [
   partner("easyecom", "EasyEcom", "Shipping and order management", "#0F9D58", "EE"),
 
   { id: "webhook_in", name: "Incoming webhook", category: "Custom connections", color: "#2F6F62", letters: "→", access: "webhook", webhook: "generic", fields: [],
-    note: "Any system can send events to Pulse Navigator: POST JSON to the address below. Sign the body with the signing secret (header X-Pulse-Signature: sha256=<hex HMAC>) so Pulse can verify it." },
+    note: "Any system can send events to Pulse Navigator: POST JSON to the address below. Sign the body with the signing secret (header X-Pulse-Signature: sha256=<hex HMAC>) so Pulse Navigator can verify it." },
   { id: "webhook_out", name: "Outgoing webhook", category: "Custom connections", color: "#2F6F62", letters: "←", access: "api", webhook: null,
     fields: [U("url", "Send events to", { placeholder: "https://example.com/pulse-events" })],
     note: "Pulse Navigator sends events to this address, signed with the signing secret below (header X-Pulse-Signature). Use Test connection to send a test event." }

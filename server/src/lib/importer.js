@@ -7,11 +7,11 @@ import { HttpError } from "./auth.js";
 export async function importBuffer({ orgId, userId = null, source = "upload", buf, filename = "", reportId, adType, periodStart, periodEnd }) {
   let table;
   try { table = await readTable(buf, filename, KNOWN_HEADERS); }
-  catch (e) { throw new HttpError(400, /xls files|empty/.test(e.message) ? `${filename || "The file"}: ${e.message}` : `Pulse could not read ${filename || "the file"}. Upload the report exactly as Amazon gives it: CSV, tab-separated TXT or XLSX.`); }
+  catch (e) { throw new HttpError(400, /xls files|empty/.test(e.message) ? `${filename || "The file"}: ${e.message}` : `Pulse Navigator could not read ${filename || "the file"}. Upload the report exactly as Amazon gives it: CSV, tab-separated TXT or XLSX.`); }
   const def = reportId ? REPORTS.find(r => r.id === reportId) : detectReport(table.headers);
   if (!def) {
     await logImport({ orgId, userId, source, report: "unknown", filename, rowsRead: table.rows.length, rowsSaved: 0, status: "failed", message: "Report type not recognised" });
-    throw new HttpError(400, `Pulse did not recognise ${filename || "this file"}. Its first columns are: ${table.rawHeaders.slice(0, 6).join(", ")}. Pick the report type by hand, or check it is one of the supported reports.`, "unknown_report");
+    throw new HttpError(400, `Pulse Navigator did not recognise ${filename || "this file"}. Its first columns are: ${table.rawHeaders.slice(0, 6).join(", ")}. Pick the report type by hand, or check it is one of the supported reports.`, "unknown_report");
   }
   if (!table.rows.length) throw new HttpError(400, `${filename || "The file"} has headers but no rows.`);
   const opts = { headers: new Set(table.headers), filename, adType, periodStart, periodEnd };

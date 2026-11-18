@@ -18,7 +18,7 @@ VIEWS["analytics-shopify"] = () => {
   const X = S.shop;
   if (X.error) return head("Shopify store", "") + `<section class="card empty-state"><h3>Could not load Shopify data</h3><p>${esc(X.error)}</p></section>`;
   if (!X.connected) return head("Shopify store", "Sales from your own website, next to your marketplace data.")
-    + `<section class="card empty-state"><h3>Connect your Shopify store</h3><p style="margin:0;color:var(--ink2);max-width:62ch">Pulse reads orders, discount codes, COD and prepaid mix, products and stock from Shopify every few hours. It never changes anything in your store.</p><div><a class="btn pri" href="#connections-shopify">Connect Shopify</a></div></section>`;
+    + `<section class="card empty-state"><h3>Connect your Shopify store</h3><p style="margin:0;color:var(--ink2);max-width:62ch">Pulse Navigator reads orders, discount codes, COD and prepaid mix, products and stock from Shopify every few hours. It never changes anything in your store.</p><div><a class="btn pri" href="#connections-shopify">Connect Shopify</a></div></section>`;
   const st = X.store, days = shopDays(X.daily), n = PER[S.period][0], a = shopRange(days, n), b = shopRange(days, n, n);
   const aov = r => r.orders ? r.net / r.orders : 0, sync = st.lastSync ? `Synced ${fmtDT(st.lastSync)}` : "First sync running";
   if (!st.lastSync && !X.daily.length) return head(esc(st.name || "Shopify store"), esc(st.domain || st.shop))

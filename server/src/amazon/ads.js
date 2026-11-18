@@ -25,7 +25,7 @@ export function adsClient(cred) {
     async report(adProduct, reportTypeId, groupBy, columns, startDate, endDate) {
       const r = await call("POST", "/reporting/reports", {
         contentType: "application/vnd.createasyncreportrequest.v3+json",
-        body: { name: `Pulse ${reportTypeId} ${startDate}`, startDate, endDate, configuration: { adProduct, groupBy, columns, reportTypeId, timeUnit: "DAILY", format: "GZIP_JSON" } }
+        body: { name: `Pulse Navigator ${reportTypeId} ${startDate}`, startDate, endDate, configuration: { adProduct, groupBy, columns, reportTypeId, timeUnit: "DAILY", format: "GZIP_JSON" } }
       });
       const until = Date.now() + 30 * 6e4;
       for (let wait = POLL_MS; Date.now() < until; wait = Math.min(60000, wait * 1.4)) {

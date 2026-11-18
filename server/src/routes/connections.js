@@ -95,11 +95,11 @@ export default async function connectionRoutes(app) {
     const kind = req.params.kind, nonce = randomToken(12), state = signState(req.org.id, req.user.id, nonce);
     reply.setCookie("pulse_oauth", nonce, { path: basePath(req) + "/api/connections", httpOnly: true, sameSite: "lax", secure: config.isProd, maxAge: 900 });
     if (kind === "sp-api") {
-      if (!SP_APP_ID) throw new HttpError(400, "The Pulse Amazon app is not approved yet. Use the private developer option.");
+      if (!SP_APP_ID) throw new HttpError(400, "The Pulse Navigator Amazon app is not approved yet. Use the private developer option.");
       return reply.redirect(`${SP_CONSENT}?${new URLSearchParams({ application_id: SP_APP_ID, state, redirect_uri: `${config.publicUrl}/api/connections/sp-api/oauth/callback` })}`);
     }
     if (kind === "ads-api") {
-      if (!config.amazon.adsClientId) throw new HttpError(400, "The Pulse Amazon Ads app is not configured yet.");
+      if (!config.amazon.adsClientId) throw new HttpError(400, "The Pulse Navigator Amazon Ads app is not configured yet.");
       return reply.redirect(`${ADS_CONSENT}?${new URLSearchParams({ client_id: config.amazon.adsClientId, scope: "advertising::campaign_management", response_type: "code", state, redirect_uri: `${config.publicUrl}/api/connections/ads-api/oauth/callback` })}`);
     }
     throw new HttpError(404, "Unknown connection.");
