@@ -62,13 +62,14 @@ export async function shopifyFeed(id) {
               case when max(o.created_at) >= now() - interval '30 days' then null else max(o.created_at at time zone '${IST}')::date end as "end"
          from shopify_orders o, lateral unnest(string_to_array(o.discount_codes, ', ')) code
         where o.org_id = $1 and ${LIVE} and coalesce(o.discount_codes, '') <> '' and o.created_at >= now() - interval '365 days' group by code order by count(*) desc`),
-    // Products on sale (price below the compare-at price), with their last 30 days of sales
-    P(`select 'sale-' || regexp_replace(v.variant_id, '\\D', '', 'g') as id, 'Sale price on Shopify' as type, ${VAR_SKU} as sku, null::timestamptz as start, null::timestamptz as "end",
+    // Products selling below their compare-at price (MRP) that sold in the last 30 days
+    P(`select 'sale-' || regexp_replace(v.variant_id, '\\D', '', 'g') as id, 'Shopify: ' || round(100 * (1 - v.price / v.compare_at)) || '% off MRP' as type, ${VAR_SKU} as sku, null::timestamptz as start, null::timestamptz as "end",
               null::int as views, coalesce(s.units, 0)::int as units, coalesce(s.rev, 0) as rev, 'Live' as status
          from shopify_variants v
          left join lateral (select sum(l.ordered_qty) as units, sum(l.line_total) as rev from ${LINES}
                             where l.org_id = v.org_id and l.variant_id = v.variant_id and ${LIVE} and o.created_at >= now() - interval '30 days') s on true
-        where v.org_id = $1 and v.status = 'ACTIVE' and v.compare_at is not null and v.price is not null and v.compare_at > v.price`),
+        where v.org_id = $1 and v.status = 'ACTIVE' and v.compare_at is not null and v.price is not null and v.compare_at > v.price and coalesce(s.units, 0) > 0
+        order by s.rev desc`),
     // Repeat customers per product over the last year (customer IDs are stored hashed)
     P(`with x as (select ${LINE_SKU} as sku, l.title, o.customer_key as ck, o.order_id, l.line_total as rev,
                          row_number() over (partition by ${LINE_SKU}, o.customer_key order by o.created_at) as nth

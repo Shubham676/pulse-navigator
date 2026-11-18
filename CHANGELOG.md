@@ -2,6 +2,10 @@
 
 Newest first. The version and date also show at the bottom of the app's side menu.
 
+## 1.5.1 (18 Nov 2026)
+
+- Deals and promotions: Shopify products are listed only when they sell below their MRP (compare-at price) and sold in the last 30 days, shown as "Shopify: N% off MRP". Stores that keep an MRP on every product no longer list every product as a deal.
+
 ## 1.5.0 (18 Nov 2026)
 
 - Shopify data now flows into every Sales, Inventory and Business page, alongside Amazon:

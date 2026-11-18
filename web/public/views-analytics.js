@@ -97,7 +97,7 @@ VIEWS["analytics-promotions"] = () => {
   const DL = S.D.deals;
   if (!DL.length) return head("Deals and promotions", "Lightning deals and 7-day deals.") + need("Upload your deals export from Seller Central to see deal results.", "deals");
   const live = DL.filter(x => x.views || x.units);
-  return head("Deals and promotions", "Amazon lightning and 7-day deals, and Shopify products on sale (price below the compare-at price), with units and revenue in the last 30 days.")
+  return head("Deals and promotions", "Amazon lightning and 7-day deals, and Shopify products selling below their MRP (compare-at price) that sold in the last 30 days.")
     + `<div class="kpis">${kpi("Deal revenue", sum(live.map(x => x.rev)), null, inr, false, `${live.length} deals with results`)}${kpi("Units sold", sum(live.map(x => x.units)), null)}${kpi("Conversion", sum(live.map(x => x.views)) ? sum(live.map(x => x.units)) / sum(live.map(x => x.views)) : 0, null, v => pct(v), false, "units ÷ glance views")}</div>`
     + card("Deal analysis", table([{ l: "Deal type", left: true }, { l: "Product", left: true }, "Start", "Glance views", "Units sold", "Revenue", "Conversion", "Status"], DL.map(x => [x.type || "–", prod(skuOf(x.sku)), x.start ? fmtD(x.start) : "–", N(x.views), N(x.units), N(x.rev, inr), N(x.views ? x.units / x.views : null, v => pct(v)), pill(x.status || "–", /running|live|active/i.test(x.status || "") ? "ok" : /upcoming|scheduled/i.test(x.status || "") ? "info" : "mut")]), { name: "deals" }), { right: copyBtn() });
 };

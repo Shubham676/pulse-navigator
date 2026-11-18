@@ -55,7 +55,7 @@ test("Shopify flows into every Sales, Inventory and Business data set", async ()
   const code = D.coupons.find(c => c.id === "WELCOME10");
   assert.equal(code.redemptions, 1); assert.equal(code.spent, 50); assert.equal(code.end, null);
   const deal = D.deals.find(x => x.sku === "DIAPER-S");
-  assert.equal(deal.type, "Sale price on Shopify"); assert.equal(deal.units, 2);
+  assert.equal(deal.type, "Shopify: 25% off MRP"); assert.equal(deal.units, 2);
   const rep = D.repeat.find(r => r.sku === "DIAPER-S");
   assert.equal(rep.unique_customers, 1); assert.equal(rep.orders, 2); assert.equal(rep.repeat_customers_pct, 100); assert.equal(rep.repeat_revenue, 449);
   assert.ok(D.links.find(x => x.sku === "SHOP-22" && x.marketplace === "Shopify"));
