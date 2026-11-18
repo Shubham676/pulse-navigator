@@ -202,8 +202,30 @@ VIEWS["analytics-timesheet"] = () => {
       ${card("Business time sheet", `<div class="metric"><span>Last 30 days</span><b>${num(m.units)} units · ${inr(m.rev)}</b></div><div class="metric"><span>Same days last year</span><b>${ly.units ? num(ly.units) + " units · " + inr(ly.rev) : "No data for last year yet"}</b></div>${ly.units ? `<div class="metric"><span>Change on last year</span>${delta(m.units, ly.units)}</div>` : ""}<div class="metric"><span>Peak hour</span><b>${sum(HOURLY) ? h12(peak) + " – " + h12((peak + 1) % 24) : "–"}</b></div>`)}</div>`
     + card("Units by hour, last 7 days", heatmap(days.map(d => ({ l: fmtD(d.date), cells: cols.map(h => cell.get(d.ds + "|" + h) || 0) })), cols), { sub: "Darker means more units ordered" });
 };
+const EXP_CATS = ["Salaries and wages", "Rent", "Packaging", "Shipping and courier", "Marketing (other)", "Software and subscriptions", "Utilities", "Professional fees", "Samples and photography", "Other"];
+const isoDay = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+// Manual expenses that fall in the last 30 days. A monthly expense counts once, from the month it starts.
+function expensesInWindow() {
+  const t = new Date(), to = isoDay(t), f = new Date(t); f.setDate(f.getDate() - 29); const from = isoDay(f);
+  return (S.D.expenses || []).filter(e => e.monthly ? e.date <= to : e.date >= from && e.date <= to);
+}
+function expenseCard(inWin) {
+  const edit = !["viewer"].includes(S.me?.org?.role), fmtE = d => new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  const all = S.D.expenses || [], older = all.filter(e => !inWin.includes(e)).slice(0, 20);
+  const row = e => `<tr><td class="l">${fmtE(e.date)}</td><td class="l">${esc(e.category)}${e.monthly ? ` <span class="pill info">Monthly</span>` : ""}</td><td class="l trunc">${esc(e.description || "")}</td><td>${inr(e.amount, 2)}</td><td>${edit ? `<button type="button" class="btn sm ghost" data-act="expdel" data-id="${e.id}" aria-label="Delete expense">Delete</button>` : ""}</td></tr>`;
+  const tbl = rows => `<div class="tw"><table><thead><tr><th class="l">Date</th><th class="l">Category</th><th class="l">Note</th><th>Amount</th><th></th></tr></thead><tbody>${rows.map(row).join("")}</tbody></table></div>`;
+  const form = edit ? `<form id="expForm" class="form" style="margin-bottom:14px"><label class="f">Date<input class="inp" type="date" id="expDate" value="${isoDay(new Date())}" max="${isoDay(new Date())}" required></label>
+      <label class="f">Category<select class="inp" id="expCat">${EXP_CATS.map(c => `<option>${c}</option>`).join("")}</select></label>
+      <label class="f">Note<input class="inp" id="expDesc" maxlength="200" placeholder="e.g. Warehouse rent, November"></label>
+      <label class="f">Amount (₹)<input class="inp" id="expAmt" inputmode="decimal" placeholder="0.00" required></label>
+      <label class="f" style="flex-direction:row;align-items:center;gap:8px;font-weight:500"><input type="checkbox" id="expMonthly"> Repeats every month</label>
+      <button class="btn pri" type="submit">Add expense</button></form>` : `<p class="note">Only members and admins can add expenses.</p>`;
+  return card("Your expenses", form + (inWin.length ? tbl(inWin) : `<p class="note">No expenses entered for the last 30 days.</p>`)
+    + (older.length ? `<details style="margin-top:10px"><summary class="note" style="cursor:pointer">Older entries (${older.length})</summary>${tbl(older)}</details>` : ""),
+    { sub: "Costs that no report brings in: rent, salaries, packaging and so on. They are included in the expenses and profit above. A monthly expense counts once in every 30 days until you delete it." });
+}
 VIEWS["analytics-pnl"] = () => {
-  if (!S.D.daily.length && !S.D.txBuckets.length) return emptyPage("Profit and loss", "What came in, what Amazon and ads took, and what is left.");
+  if (!S.D.daily.length && !S.D.txBuckets.length) return emptyPage("Profit and loss", "What came in, what Amazon and ads took, and what is left.") + expenseCard(expensesInWindow());
   const tb = S.D.txBuckets, exact = tb.length > 0, m = range(30), adsFromReports = adTotals().spend;
   const SHOP_FEE = 0.02, shopRev = sum(DAILY.slice(-30).map(d => d.shopRev || 0)), amzRev = m.rev - shopRev;   // Shopify: payment gateway fee estimate
   const units30 = new Map(SKUS.map(s => [s.sku, skuRange(s.sku, 30).units])), cogs = sum(SKUS.map(s => (units30.get(s.sku) || 0) * (s.cogs || 0))), noCost = SKUS.filter(s => s.cogs == null && units30.get(s.sku)).length;
@@ -221,14 +243,18 @@ VIEWS["analytics-pnl"] = () => {
     income = shopRev > 0 ? [["Amazon sales (from orders)", amzRev], ["Shopify sales (from orders)", shopRev]].filter(x => x[1] > 0) : [["Product sales (from orders)", m.rev]];
     lines = [[`Amazon fees (estimated at ${pct(FEE(), 0)})`, amzRev * FEE()], ...(shopRev > 0 ? [[`Shopify payment gateway fees (estimated at ${pct(SHOP_FEE, 0)})`, shopRev * SHOP_FEE]] : []), ["Cost of advertising", adsFromReports]].filter(x => x[1] > 0 || /advertising/.test(x[0]));
   }
+  const expWin = expensesInWindow(), expByCat = new Map();
+  for (const e of expWin) expByCat.set(e.category, (expByCat.get(e.category) || 0) + e.amount);
+  lines.push(...[...expByCat].sort((a, b) => b[1] - a[1]).map(([c, v]) => [`${c} (entered by you)`, v]));
   const ti = sum(income.map(x => x[1])), te = sum(lines.map(x => x[1])), net = ti - te, colors = ["#0E6B62", "#E09A1A", "#6C8EBF", "#B5483B", "#8A9A5B", "#9C6ADE", "#4BA3A3", "#C9A227"];
   const feeBySku = new Map(S.D.txSku.map(r => [r.sku, r]));
   return head("Profit and loss", `Last 30 days. ${exact ? "Amazon fees from your transaction report." : S.D.channels?.amazon ? "Estimated from orders and ads; upload the Amazon transaction report for exact fees." : "Estimated from orders and ads."}${shopRev > 0 ? " Shopify payment fees are estimated at 2%." : ""}`, `<a class="btn" href="#analytics-pim">Edit costs</a>${copyBtn()}`)
     + (exact || !S.D.channels?.amazon ? "" : need("Amazon fees here are an estimate. Upload the date range transaction report from Payments for exact fees, refunds and TCS.", "transactions"))
     + (noCost ? strip([{ t: "warn", h: `${noCost} selling SKU${noCost > 1 ? "s have" : " has"} no cost`, p: "Profit after COGS leaves them out. Add costs in Product master." }]) : "")
-    + `<div class="kpis">${kpi("Net sales", ti, null, inr, false, "after refunds and rebates")}${kpi(shopRev > 0 ? "Fees and ads" : "Amazon fees and ads", te, null, inr, false, ti ? pct(te / ti) + " of sales" : "")}${kpi("Payout", net, null, inr, false, "before product cost")}${kpi("Profit after COGS", net - cogs, null, inr, false, ti ? pct((net - cogs) / ti) + " margin" : "")}</div>`
+    + `<div class="kpis">${kpi("Net sales", ti, null, inr, false, "after refunds and rebates")}${kpi(expWin.length ? "Fees, ads and expenses" : shopRev > 0 ? "Fees and ads" : "Amazon fees and ads", te, null, inr, false, ti ? pct(te / ti) + " of sales" : "")}${kpi(expWin.length ? "Left after expenses" : "Payout", net, null, inr, false, "before product cost")}${kpi("Profit after COGS", net - cogs, null, inr, false, ti ? pct((net - cogs) / ti) + " margin" : "")}</div>`
     + (ti > 0 ? card("Where each rupee of sales goes", `<div class="pnlbar">${lines.filter(e => e[1] > 0).map((e, i) => `<i style="width:${(e[1] / ti * 100).toFixed(2)}%;background:${colors[i % 8]}" title="${esc(e[0])}: ${inr(e[1])}"></i>`).join("")}<i style="width:${Math.max(0, cogs / ti * 100).toFixed(2)}%;background:var(--line2)" title="COGS"></i><i style="flex:1;background:var(--ok)" title="Profit"></i></div><div class="legend">${lines.filter(e => e[1] > 0).map((e, i) => `<span><i style="background:${colors[i % 8]}"></i>${esc(e[0])}</span>`).join("")}<span><i style="background:var(--line2)"></i>COGS</span><span><i style="background:var(--ok)"></i>Profit</span></div>`) : "")
     + `<div class="grid g2">${card("Income", income.map(([l, v]) => `<div class="metric"><span>${esc(l)}</span><b>${inr(v, 2)}</b></div>`).join("") + `<div class="metric"><b>Total income</b><b>${inr(ti, 2)}</b></div>`)}
       ${card("Expenses", lines.map(([l, v]) => `<div class="metric"><span>${esc(l)}</span><b>${inr(-v, 2)}</b></div>`).join("") + `<div class="metric"><span>Cost of goods (COGS)</span><b>${inr(-cogs, 2)}</b></div><div class="metric"><b>Total expenses</b><b>${inr(-(te + cogs), 2)}</b></div>`)}</div>`
-    + card("Profit by SKU", table([{ l: "Product", left: true }, "Sales", "COGS", S.D.channels?.shopify ? "Fees" : "Amazon fees", "Ads", "Profit", "Margin"], SKUS.map(s => { const r = skuRange(s.sku, 30), t = feeBySku.get(s.sku), c = s.cogs == null ? null : r.units * s.cogs, f = t ? -t.fees : r.rev * (s.channel === "shopify" ? SHOP_FEE : FEE()), a = sum(CAMPAIGNS.filter(x => x.sku === s.sku).map(x => x.spend)), p = c == null ? null : r.rev - c - f - a; return { s, r, row: [prod(s), N(r.rev, inr), N(c, inr), N(f, inr), N(a, inr), { v: p ?? "", h: p == null ? "Add cost" : `<b style="color:${p < 0 ? "var(--bad)" : "var(--ok)"}">${inr(p)}</b>` }, N(p == null || !r.rev ? null : p / r.rev, v => pct(v))] }; }).filter(x => x.r.rev).sort((a, b) => b.r.rev - a.r.rev).map(x => x.row), { name: "pnl-by-sku" }), { sub: "Ads cost is only counted for campaigns linked to a product (from the advertised product report)." });
+    + card("Profit by SKU", table([{ l: "Product", left: true }, "Sales", "COGS", S.D.channels?.shopify ? "Fees" : "Amazon fees", "Ads", "Profit", "Margin"], SKUS.map(s => { const r = skuRange(s.sku, 30), t = feeBySku.get(s.sku), c = s.cogs == null ? null : r.units * s.cogs, f = t ? -t.fees : r.rev * (s.channel === "shopify" ? SHOP_FEE : FEE()), a = sum(CAMPAIGNS.filter(x => x.sku === s.sku).map(x => x.spend)), p = c == null ? null : r.rev - c - f - a; return { s, r, row: [prod(s), N(r.rev, inr), N(c, inr), N(f, inr), N(a, inr), { v: p ?? "", h: p == null ? "Add cost" : `<b style="color:${p < 0 ? "var(--bad)" : "var(--ok)"}">${inr(p)}</b>` }, N(p == null || !r.rev ? null : p / r.rev, v => pct(v))] }; }).filter(x => x.r.rev).sort((a, b) => b.r.rev - a.r.rev).map(x => x.row), { name: "pnl-by-sku" }), { sub: "Ads cost is only counted for campaigns linked to a product (from the advertised product report). Your own expenses are not split by SKU." })
+    + expenseCard(expWin);
 };

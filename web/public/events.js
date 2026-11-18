@@ -111,6 +111,7 @@ document.addEventListener("click", async e => {
     case "inttest": { const r = await act(() => api("POST", `/api/integrations/${d.id}/test`), b); if (r) { toast(r.message); intReset(); render(); } break; }
     case "intdel": confirmModal("Disconnect?", "The saved credentials and webhook address are deleted. Events already received are deleted too.", "Disconnect", async yb => { const r = await act(() => api("DELETE", `/api/integrations/${d.id}`), yb, "Disconnected"); if (r) { closeModal(); intReset(); render(); } }); break;
     case "introtate": confirmModal("Get a new webhook address?", "The current address and signing secret stop working immediately. Update them wherever you set them up.", "Get new address", async yb => { const r = await act(() => api("POST", `/api/integrations/${d.id}/rotate`), yb, "New address ready"); if (r) { closeModal(); intReset(); render(); } }); break;
+    case "expdel": confirmModal("Delete this expense?", "It is removed from Profit and loss. This can't be undone.", "Delete", async yb => { const r = await act(() => api("DELETE", `/api/expenses/${d.id}`), yb, "Expense deleted"); if (r) { closeModal(); reload(true); } }); break;
     case "intrefresh": S.intAllEvents = null; render(); break;
     case "viewevent": { const all = [...(S.intAllEvents?.events || []), ...Object.values(S.intEvents || {}).flatMap(x => x.events || [])], ev = all.find(x => String(x.id) === d.id);
       if (ev) modal(`<button type="button" class="btn sm ghost x" data-act="close" aria-label="Close">✕</button><h3 id="mTitle">${esc(ev.topic || "Webhook event")}</h3><p class="note" style="margin-top:0">${fmtDT(ev.received_at)} · ${ev.verified ? "Signature verified" : "Not verified"}</p><pre class="lcd" style="max-height:60vh;overflow:auto;white-space:pre-wrap;word-break:break-word">${esc(ev.body ? JSON.stringify(ev.body, null, 2) : ev.body_text || "(empty)")}</pre>`);
@@ -161,6 +162,12 @@ document.addEventListener("submit", async e => {
   e.preventDefault();
   const f = e.target, id = f.id, v = x => ($(x) ? $(x).value.trim() : ""), btn = f.querySelector("button[type=submit]");
   if (id === "authForm") return submitAuth(f);
+  if (id === "expForm") {
+    const amt = Number(v("expAmt").replace(/[₹,\s]/g, ""));
+    if (!v("expDate") || !(amt > 0)) { toast("Enter a date and an amount above zero."); return; }
+    const r = await act(() => api("POST", "/api/expenses", { date: v("expDate"), category: v("expCat"), description: v("expDesc"), amount: amt, monthly: $("expMonthly").checked }), btn, "Expense added");
+    if (r) reload(true); return;
+  }
   if (id === "ordForm") { Object.assign(S.ordF, { q: v("ordQ"), from: v("ordFrom"), to: v("ordTo"), page: 1 }); render(); return; }
   if (id === "intForm") {
     const fields = Object.fromEntries([...f.querySelectorAll("input[name]")].map(i => [i.name, i.value]));

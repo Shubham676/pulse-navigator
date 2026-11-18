@@ -2,6 +2,11 @@
 
 Newest first. The version and date also show at the bottom of the app's side menu.
 
+## 1.6.0 (18 Nov 2026)
+
+- Profit and loss: new "Your expenses" section to enter expenses by hand (date, category, note, amount). Entries can repeat every month. They are added to the expenses list, the "where each rupee goes" bar and profit, grouped by category. Members and admins can add and delete; viewers see them.
+- New table `expenses` (migration 006) and API: POST /api/expenses, DELETE /api/expenses/:id. Expenses are included in /api/data.
+
 ## 1.5.1 (18 Nov 2026)
 
 - Deals and promotions: Shopify products are listed only when they sell below their MRP (compare-at price) and sold in the last 30 days, shown as "Shopify: N% off MRP". Stores that keep an MRP on every product no longer list every product as a deal.
