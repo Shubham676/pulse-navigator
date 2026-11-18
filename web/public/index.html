@@ -36,7 +36,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 a{color:var(--accent)}
-.app{display:grid;grid-template-columns:78px 220px 1fr;height:100%}
+.app{display:grid;grid-template-columns:78px 220px 1fr;min-height:100%}
+.rail,.side{position:sticky;top:0;height:100vh;height:100dvh;align-self:start;overflow-y:auto;scrollbar-width:thin}
 /* rail */
 .rail{background:var(--ink);display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 0}
 :root[data-theme="dark"] .rail{background:#0B0E0D}

@@ -2,6 +2,10 @@
 
 Newest first. The version and date also show at the bottom of the app's side menu.
 
+## 1.7.2 (18 Nov 2026)
+
+- The dark icon bar and the menu beside it stay in place while the page scrolls. A long menu scrolls on its own.
+
 ## 1.7.1 (18 Nov 2026)
 
 - The app is now called Pulse Navigator everywhere it shows a name: browser tab, loading screen, sign-in and sign-up, invites, Copilot, messages, the Razorpay checkout and wallet invoices.
