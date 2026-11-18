@@ -38,7 +38,7 @@ The **Connections** menu lists 32 platforms (Indian marketplaces, quick commerce
 Each brand connects its own store under **Account › Connections**. Nothing goes in `.env`.
 
 1. In Shopify admin: **Settings › Apps › Develop apps › Build apps in Dev Dashboard**. Create an app (e.g. "Pulse") in the same Shopify organization as the store.
-2. In the app's version, set the Admin API scopes `read_orders`, `read_all_orders` and `read_products`, then **Release**. (`read_all_orders` needs no Shopify approval for apps in the store owner's own organization; without it only the last 60 days of orders come through.)
+2. In the app's version, set the Admin API scopes `read_orders`, `read_all_orders` and `read_products`, plus `read_customers` (optional: only used to count repeat customers, by a hashed customer ID), then **Release**. Without `read_customers`, or without protected customer data access for addresses, the sync skips those fields and says so in the sync result instead of failing. (`read_all_orders` needs no Shopify approval for apps in the store owner's own organization; without it only the last 60 days of orders come through.)
 3. **Install** the app on the store and approve the scopes.
 4. From the app's **Settings**, copy the **Client ID** and **Client secret** into Pulse along with the store's `your-store.myshopify.com` address.
 
