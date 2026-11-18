@@ -31,7 +31,9 @@ const server = http.createServer((req, res) => {
     const { query, variables } = JSON.parse(body); calls.push(query.match(/\{\s*(\w+)/)[1]);
     const cost = { extensions: { cost: { requestedQueryCost: 100, throttleStatus: { maximumAvailable: 2000, currentlyAvailable: 1900, restoreRate: 100 } } } };
     if (/\bshop\s*\{/.test(query)) return send(200, { data: { shop: { name: "Dumbledo", myshopifyDomain: "e0rpax-nb.myshopify.com", currencyCode: "INR", primaryDomain: { host: "www.dumbledo.com" } } }, ...cost });
-    if (/orders\(/.test(query)) { calls.push("q=" + variables.q.split(":")[0]); const i = variables.after ? Number(variables.after) : 0, page = orderPages[i];
+    if (/orders\(/.test(query) && req.headers["x-shopify-access-token"] === "shpat_static" && /customer \{/.test(query))
+      return send(200, { data: null, errors: [{ message: "Access denied for customer field. Required access: `read_customers` access scope.", path: ["orders", "nodes", "0", "customer"], extensions: { code: "ACCESS_DENIED" } }] });
+    if (/orders\(/.test(query)) { calls.push("q=" + variables.q.split(":")[0]); const i = variables.after ? Number(variables.after) : 0, page = orderPages[i].map(o => /customer \{/.test(query) ? o : { ...o, customer: undefined });
       return send(200, { data: { orders: { nodes: page, pageInfo: { hasNextPage: i + 1 < orderPages.length, endCursor: String(i + 1) } } }, ...cost }); }
     if (/order\(id/.test(query)) return send(200, { data: { order: { lineItems: { nodes: [line(99, "DB-INS-SM-BLK-5L", 2, 50)], pageInfo: { hasNextPage: false, endCursor: null } } } }, ...cost });
     if (/productVariants/.test(query)) return send(200, { data: { productVariants: { nodes: variants, pageInfo: { hasNextPage: false, endCursor: null } } }, ...cost });
@@ -128,6 +130,14 @@ test("Shopify: an older custom app's access token works too", async () => {
   const u = await t.signup("s3@example.com");
   const r = await u.req("POST", "/api/connections/shopify", { shop: "e0rpax-nb", accessToken: "shpat_static" });
   assert.equal(r.statusCode, 200, r.body);
+  // This store's app has no read_customers: the sync drops the customer field and still saves orders
+  orderPages = [[order(2001, { lines: [line(21, "DB-CD-FS-HEART-V1", 1, 299)] })]];
+  const { syncShopify } = await import("../src/shopify/client.js");
+  const done = await syncShopify(await orgOf("s3@example.com"));
+  assert.match(done.join(";"), /orders: 1 /);
+  assert.match(done.join(";"), /read_customers/);
+  const saved = await t.db.one("select customer_key, ship_state from shopify_orders where org_id=$1", [await orgOf("s3@example.com")]);
+  assert.deepEqual(saved, { customer_key: null, ship_state: "MH" });
   const bad = await u.req("POST", "/api/connections/shopify", { shop: "e0rpax-nb", accessToken: "shpat_wrong" });
   assert.equal(bad.statusCode, 400);
   assert.match(bad.json().error, /access token/);

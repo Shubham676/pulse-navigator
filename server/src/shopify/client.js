@@ -80,7 +80,12 @@ export function shopifyClient(cred) {
         await sleep(t ? Math.max(1000, ((need - t.currentlyAvailable) / (t.restoreRate || 50)) * 1000) : 2000);
         return gql(query, variables, attempt + 1);
       }
-      if (j.errors.some(e => e.extensions?.code === "ACCESS_DENIED")) throw new ShopifyError("The Shopify app is missing permissions. Give it read_orders and read_products, release the version, and approve it on the store.", 403);
+      const denied = j.errors.filter(e => e.extensions?.code === "ACCESS_DENIED");
+      if (denied.length) {
+        const err = new ShopifyError("The Shopify app is missing permissions. Give it read_orders and read_products, release the version, and approve it on the store.", 403);
+        err.deniedFields = denied.flatMap(e => e.path || []).map(String);
+        throw err;
+      }
       throw new ShopifyError("Shopify error: " + j.errors.map(e => e.message).join("; ").slice(0, 300), 500);
     }
     // Stay well under the cost bucket so a long sync never gets throttled mid-page
@@ -100,14 +105,16 @@ export async function checkShop(cred) {
 const money = x => Number(x?.shopMoney?.amount ?? 0);
 const isCod = gateways => gateways.some(g => /cash on delivery|\bcod\b/i.test(g));
 
+// customer needs read_customers, and shippingAddress needs protected customer data access; both are optional
+const OPTIONAL_FIELDS = { customer: "customer { id }", shippingAddress: "shippingAddress { city provinceCode zip }" };
 const ORDER_FIELDS = `id name createdAt updatedAt cancelledAt test displayFinancialStatus displayFulfillmentStatus sourceName paymentGatewayNames discountCodes
-  customer { id } shippingAddress { city provinceCode zip }
+  __OPTIONAL__
   currentSubtotalPriceSet { shopMoney { amount } } currentTotalPriceSet { shopMoney { amount } } totalShippingPriceSet { shopMoney { amount } }
   currentTotalTaxSet { shopMoney { amount } } currentTotalDiscountsSet { shopMoney { amount } } totalRefundedSet { shopMoney { amount } }`;
 const LINE_FIELDS = `pageInfo { hasNextPage endCursor } nodes { id sku name quantity currentQuantity variant { id product { id } }
   originalUnitPriceSet { shopMoney { amount } } discountedTotalSet { shopMoney { amount } } totalDiscountSet { shopMoney { amount } } taxLines { priceSet { shopMoney { amount } } } }`;
-const ORDERS_Q = `query($q: String!, $after: String) { orders(first: 25, after: $after, sortKey: UPDATED_AT, query: $q) {
-  pageInfo { hasNextPage endCursor } nodes { ${ORDER_FIELDS} lineItems(first: 30) { ${LINE_FIELDS} } } } }`;
+const ordersQuery = optional => `query($q: String!, $after: String) { orders(first: 25, after: $after, sortKey: UPDATED_AT, query: $q) {
+  pageInfo { hasNextPage endCursor } nodes { ${ORDER_FIELDS.replace("__OPTIONAL__", optional.map(k => OPTIONAL_FIELDS[k]).join(" "))} lineItems(first: 30) { ${LINE_FIELDS} } } } }`;
 const MORE_LINES_Q = `query($id: ID!, $after: String) { order(id: $id) { lineItems(first: 100, after: $after) { ${LINE_FIELDS} } } }`;
 const VARIANTS_Q = `query($after: String) { productVariants(first: 100, after: $after) { pageInfo { hasNextPage endCursor }
   nodes { id sku title price compareAtPrice inventoryQuantity product { id title status productType handle } inventoryItem { unitCost { amount } } } } }`;
@@ -145,9 +152,18 @@ export async function syncShopify(orgId, log = () => {}) {
   const since = conn.last_sync_at ? new Date(new Date(conn.last_sync_at).getTime() - 864e5) : new Date(Date.now() - FIRST_SYNC_DAYS * 864e5);
   const query = `${conn.last_sync_at ? "updated_at" : "created_at"}:>='${since.toISOString()}'`;
 
-  let after = null, orders = 0, lines = 0;
-  do {
-    const d = await sh.gql(ORDERS_Q, { q: query, after });
+  let after = null, orders = 0, lines = 0, optional = Object.keys(OPTIONAL_FIELDS);
+  const skipped = [];
+  for (;;) {
+    let d;
+    try { d = await sh.gql(ordersQuery(optional), { q: query, after }); }
+    catch (e) {
+      // Missing read_customers or protected customer data: drop just those fields and carry on
+      const drop = optional.filter(k => (e.deniedFields || []).includes(k));
+      if (!drop.length) throw e;
+      optional = optional.filter(k => !drop.includes(k)); skipped.push(...drop);
+      continue;
+    }
     for (const o of d.orders.nodes) {
       if (o.test) continue;
       const ls = [...o.lineItems.nodes];
@@ -158,7 +174,8 @@ export async function syncShopify(orgId, log = () => {}) {
       await saveOrder(orgId, o, ls); orders++; lines += ls.length;
     }
     after = d.orders.pageInfo.hasNextPage ? d.orders.pageInfo.endCursor : null;
-  } while (after);
+    if (!after) break;
+  }
 
   let variants = 0; after = null;
   const seen = [];
@@ -187,6 +204,8 @@ export async function syncShopify(orgId, log = () => {}) {
 
   await q("update connections set last_sync_at=now(), last_error=null, status='connected' where org_id=$1 and kind='shopify'", [orgId]);
   const done = [`Shopify orders: ${orders} (${lines} items)`, `Shopify variants: ${variants}`];
+  if (skipped.includes("customer")) done.push("Repeat customers skipped: add the read_customers scope to the Shopify app");
+  if (skipped.includes("shippingAddress")) done.push("Ship-to state skipped: allow protected customer data (address) for the Shopify app");
   log(`Shopify sync for org ${orgId}: ${done.join("; ")}`);
   return done;
 }

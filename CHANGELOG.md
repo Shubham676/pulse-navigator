@@ -2,6 +2,11 @@
 
 Newest first. The version and date also show at the bottom of the app's side menu.
 
+## 1.3.1 (18 Nov 2026)
+
+- Shopify sync no longer fails when the app lacks `read_customers` or protected customer data access: it skips the customer and ship-to fields, saves everything else, and says which scope to add.
+- Connection instructions list `read_customers` as an optional scope (used only for repeat customers).
+
 ## 1.3.0 (18 Nov 2026)
 
 - New **Connections** menu in the left bar: 32 platforms in one place, grouped as Indian marketplaces, quick commerce, your own store, global marketplaces, shipping and order management, and custom connections. Search by name.
