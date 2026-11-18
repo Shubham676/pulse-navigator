@@ -63,7 +63,7 @@ test("Shopify: store address is normalised from any form", async () => {
 test("Shopify: wrong secret and a different organization get clear messages", async () => {
   const u = await t.signup("s1@example.com");
   let r = await u.req("POST", "/api/connections/shopify", { shop: "e0rpax-nb", clientId: "cid", clientSecret: "wrong" });
-  assert.equal(r.statusCode, 400); assert.match(r.json().error, /client ID and secret/);
+  assert.equal(r.statusCode, 400); assert.match(r.json().error, /does not recognise this client ID and secret \(invalid_client\)/);
   r = await u.req("POST", "/api/connections/shopify", { shop: "e0rpax-nb", clientId: "other-org", clientSecret: "x" });
   assert.equal(r.statusCode, 400); assert.match(r.json().error, /different Shopify organizations/);
   r = await u.req("POST", "/api/connections/shopify", { shop: "e0rpax-nb" });

@@ -5,6 +5,7 @@ Newest first. The version and date also show at the bottom of the app's side men
 ## 1.3.1 (18 Nov 2026)
 
 - Shopify sync no longer fails when the app lacks `read_customers` or protected customer data access: it skips the customer and ship-to fields, saves everything else, and says which scope to add.
+- When Shopify refuses the client ID and secret, the error now shows Shopify's own reason (wrong secret, app not installed, …) instead of a generic message.
 - Connection instructions list `read_customers` as an optional scope (used only for repeat customers).
 
 ## 1.3.0 (18 Nov 2026)

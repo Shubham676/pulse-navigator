@@ -44,7 +44,13 @@ async function accessToken(cred, { fresh = false } = {}) {
   if (!res.ok) {
     if (/shop_not_permitted/i.test(text)) throw new ShopifyError("Shopify refused: this app and the store are in different Shopify organizations. Create the app in the Dev Dashboard of the organization that owns the store.", 400);
     if (res.status === 404) throw new ShopifyError(`No Shopify store at ${cred.shop}. Check the myshopify.com address.`, 400);
-    throw new ShopifyError("Shopify sign-in failed. Check the client ID and secret, and that the app is installed on the store.", 400);
+    // Pass on Shopify's own reason so the person can tell a wrong secret from an app that isn't installed
+    let reason = "";
+    try { const j = JSON.parse(text); reason = [j.error, j.error_description || j.errors].filter(Boolean).join(": "); } catch { reason = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(); }
+    reason = String(reason).slice(0, 200);
+    if (/invalid_client|invalid client/i.test(reason)) throw new ShopifyError(`Shopify does not recognise this client ID and secret (${reason}). Copy both again from the app's Settings in the Dev Dashboard; the secret is the long value behind "Reveal".`, 400);
+    if (/not.?installed|app_not_installed/i.test(reason)) throw new ShopifyError(`The app is not installed on ${cred.shop} (${reason}). Release a version in the Dev Dashboard, then install it on the store.`, 400);
+    throw new ShopifyError(`Shopify sign-in failed (HTTP ${res.status}${reason ? ": " + reason : ""}). Check the client ID and secret, that the app has a released version, and that it is installed on ${cred.shop}.`, 400);
   }
   const j = JSON.parse(text);
   tokens.set(key, { token: j.access_token, expiresAt: Date.now() + (Number(j.expires_in) || 86399) * 1000 });
