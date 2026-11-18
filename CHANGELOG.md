@@ -2,6 +2,14 @@
 
 Newest first. The version and date also show at the bottom of the app's side menu.
 
+## 1.4.0 (18 Nov 2026)
+
+- New page **Analytics › Sales › All orders**: every Amazon and Shopify order in one list, newest first. Filter by channel, status (open, shipped, cancelled, returned or refunded), period or custom dates (Indian time), and search by order number, SKU, product, city or state. 50 orders per page.
+- Totals for the filtered orders: orders, units, sales (excluding cancelled and returned), open, cancelled and returned.
+- **View** opens an order's items: prices, tax, shipping and promotions for Amazon (with any returns); line items, discounts, totals, payment and refunds for Shopify.
+- **Download CSV** exports every order that matches the filters (up to 100,000).
+- The old **Account › Amazon and Shopify** page is removed. Amazon and Shopify are set up from their tiles under **Connections**; old links go to Connections. The Account icon now opens Upload reports.
+
 ## 1.3.0 (18 Nov 2026)
 
 - New **Connections** menu in the left bar: 32 platforms in one place, grouped as Indian marketplaces, quick commerce, your own store, global marketplaces, shipping and order management, and custom connections. Search by name.

@@ -34,7 +34,8 @@ async function uploadFiles(files) {
   } catch (err) { out.innerHTML = `<p style="color:var(--bad);font-weight:600">${esc(err.message)}</p>`; }
 }
 
-VIEWS["account-channels"] = () => {
+// Amazon and Shopify set-up, shown on their tiles under Connections (Connections › Amazon / Shopify)
+function liveConnectionPage(id) {
   if (!S.conns) { api("GET", "/api/connections").then(r => { S.conns = r; render(); }).catch(e => toast(e.message)); return `<div class="empty">Loading…</div>`; }
   const C = S.conns, get = k => C.connections.find(c => c.kind === k), sp = get("sp_api"), ad = get("ads_api"), job = k => C.jobs.find(j => j.kind === k);
   const status = (c, k) => !c ? `<span class="pill mut">Not connected</span>` : c.last_error ? `<span class="pill bad" title="${esc(c.last_error)}">Needs attention</span>` : job(k)?.state === "running" || job(k)?.state === "queued" ? `<span class="pill info">Syncing</span>` : `<span class="pill ok">Connected</span>`;
@@ -51,10 +52,10 @@ VIEWS["account-channels"] = () => {
     <form id="shopForm" style="display:flex;flex-direction:column;gap:10px"><label class="f">Store address<input class="inp" id="shShop" placeholder="your-store.myshopify.com" autocomplete="off"></label><div class="form"><label class="f">Client ID<input class="inp" id="shCid" autocomplete="off"></label><label class="f">Client secret<input class="inp" id="shCs" type="password" autocomplete="off"></label></div>
     <details><summary class="note" style="cursor:pointer">Have an older custom app with an Admin API access token instead?</summary><label class="f" style="margin-top:8px">Admin API access token<input class="inp" id="shTok" type="password" placeholder="shpat_…" autocomplete="off"></label></details>
     <div><button class="btn pri" type="submit" data-busy="Checking with Shopify"${isAdmin() ? "" : " disabled"}>Connect Shopify store</button></div></form>`;
-  return head("Amazon and Shopify", "Live sync: connect once and Pulse pulls new data every few hours. Credentials are stored encrypted. Uploading reports by hand works alongside this.")
-    + `<div class="grid g2">${block("Amazon seller account (SP-API)", "sp-api", sp, "sp_sync", spForm)}${block("Amazon Ads", "ads-api", ad, "ads_sync", adForm)}</div>`
-    + `<div class="grid g2">${block("Shopify store", "shopify", sh, "shopify_sync", shForm)}${sh ? card("Shopify data", `<p style="margin:0 0 10px">Orders, payment mix, discount codes, top products and stock from ${esc(sh.config?.domain || sh.config?.shop || "your store")}.</p><a class="btn" href="#analytics-shopify">Open Shopify store page</a>`) : ""}</div>`
-    + card("What each connection pulls", `<div class="metric"><span><b>Seller account</b><small>Orders, listings, FBA stock, FBA and seller-fulfilled returns, sales and traffic, settlement reports, account health</small></span></div><div class="metric"><span><b>Amazon Ads</b><small>Daily SP, SB and SD campaign results, placements, search terms, advertised products. Pausing, enabling and budget changes are sent back to Amazon.</small></span></div><div class="metric"><span><b>Shopify store</b><small>Orders with items, discounts, shipping, tax, refunds and COD or prepaid; products, variants, prices and stock. Read only: Pulse never changes your store.</small></span></div><div class="metric"><span><b>Flipkart, Meesho, WooCommerce and 30+ more</b><small>Under <a href="#connections">Connections</a>: save API keys, test them and receive webhooks.</small></span></div>`);
+  if (id === "shopify") return `<div class="grid g2">${block("Shopify store", "shopify", sh, "shopify_sync", shForm)}${sh ? card("Shopify data", `<p style="margin:0 0 10px">Orders, payment mix, discount codes, top products and stock from ${esc(sh.config?.domain || sh.config?.shop || "your store")}.</p><a class="btn" href="#analytics-shopify">Open Shopify store page</a>`) : ""}</div>`
+    + card("What it pulls", `<div class="metric"><span><b>Shopify store</b><small>Orders with items, discounts, shipping, tax, refunds and COD or prepaid; products, variants, prices and stock. Read only: Pulse never changes your store.</small></span></div>`);
+  return `<div class="grid g2">${block("Amazon seller account (SP-API)", "sp-api", sp, "sp_sync", spForm)}${block("Amazon Ads", "ads-api", ad, "ads_sync", adForm)}</div>`
+    + card("What each connection pulls", `<div class="metric"><span><b>Seller account</b><small>Orders, listings, FBA stock, FBA and seller-fulfilled returns, sales and traffic, settlement reports, account health</small></span></div><div class="metric"><span><b>Amazon Ads</b><small>Daily SP, SB and SD campaign results, placements, search terms, advertised products. Pausing, enabling and budget changes are sent back to Amazon.</small></span></div>`);
 };
 
 VIEWS["account-wallet"] = () => {
@@ -81,3 +82,6 @@ VIEWS["account-settings"] = () => {
       + (T.invites.length ? `<p class="note" style="font-weight:700">Waiting to join: ${T.invites.map(i => `${esc(i.email)} (${i.role})`).join(", ")}</p>` : "")
       + (isAdmin() ? `<form id="inviteForm" class="form" style="margin-top:12px"><label class="f">Email<input class="inp" id="invEmail" type="email"></label><label class="f">Role<select class="inp" id="invRole"><option value="member">Member: can upload and change ads</option><option value="viewer">Viewer: read only</option><option value="admin">Admin: also manages team and connections</option></select></label><button class="btn pri" type="submit">Create invite link</button></form><div id="invOut"></div>` : ""));
 };
+
+// The old Account page now lives under Connections; keep old links and bookmarks working
+VIEWS["account-channels"] = () => { location.replace("#connections"); return ""; };

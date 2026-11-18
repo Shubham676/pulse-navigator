@@ -110,17 +110,17 @@ const canEdit = () => S.me && ["owner", "admin", "member"].includes(S.me.org?.ro
 const isAdmin = () => S.me && ["owner", "admin"].includes(S.me.org?.role);
 function emptyPage(title, sub) {
   return head(title, sub) + `<section class="card empty-state"><h3>No data yet for ${esc(S.D.org.name)}</h3><p style="margin:0;color:var(--ink2);max-width:62ch">Upload your Amazon reports or connect your Amazon seller account, and this page fills in. Most sellers start with the All Orders report and the Sponsored Products campaign report.</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn pri" href="#account-data">Upload reports</a><a class="btn" href="#account-channels">Connect Amazon</a>${isAdmin() && !hasData() ? `<button type="button" class="btn" data-act="loadsample">Try with sample data</button>` : ""}</div></section>`;
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn pri" href="#account-data">Upload reports</a><a class="btn" href="#connections">Connect Amazon</a>${isAdmin() && !hasData() ? `<button type="button" class="btn" data-act="loadsample">Try with sample data</button>` : ""}</div></section>`;
 }
 
 /* ---------- navigation ---------- */
 const NAV = {
   copilot: { title: "Copilot", groups: [["", [["copilot", "Chat"]]]] },
   agents: { title: "AI agents", groups: [["", [["agents", "All agents"], ["agents-history", "Run history"]]]] },
-  analytics: { title: "Analytics", groups: [["", [["analytics-home", "Overview"]]], ["Sales", [["analytics-shipped", "Shipped orders"], ["analytics-cancelled", "Cancellations"], ["analytics-returns", "Returns"], ["analytics-coupons", "Coupons"], ["analytics-promotions", "Deals and promotions"], ["analytics-analysis", "Sales analysis"], ["analytics-projection", "Sales projection"], ["analytics-repeat", "Repeat purchase"]]], ["Inventory", [["analytics-inventory", "Inventory dashboard"], ["analytics-invproj", "Inventory projection"], ["analytics-suppressed", "Suppressed listings"], ["analytics-pim", "Product master"]]], ["Business", [["analytics-standard", "Standard report"], ["analytics-weekly", "Weekly comparison"], ["analytics-timesheet", "Time sheet"], ["analytics-pnl", "Profit and loss"]]], ["Own store", [["analytics-shopify", "Shopify store"]]]] },
+  analytics: { title: "Analytics", groups: [["", [["analytics-home", "Overview"]]], ["Sales", [["analytics-orders", "All orders"], ["analytics-shipped", "Shipped orders"], ["analytics-cancelled", "Cancellations"], ["analytics-returns", "Returns"], ["analytics-coupons", "Coupons"], ["analytics-promotions", "Deals and promotions"], ["analytics-analysis", "Sales analysis"], ["analytics-projection", "Sales projection"], ["analytics-repeat", "Repeat purchase"]]], ["Inventory", [["analytics-inventory", "Inventory dashboard"], ["analytics-invproj", "Inventory projection"], ["analytics-suppressed", "Suppressed listings"], ["analytics-pim", "Product master"]]], ["Business", [["analytics-standard", "Standard report"], ["analytics-weekly", "Weekly comparison"], ["analytics-timesheet", "Time sheet"], ["analytics-pnl", "Profit and loss"]]], ["Own store", [["analytics-shopify", "Shopify store"]]]] },
   ads: { title: "Ads", groups: [["", [["ads-overview", "Ads overview"], ["ads-campaigns", "Campaign manager"], ["ads-reports", "Reports"]]], ["Tools", [["ads-tracker", "Performance tracker"], ["ads-dayparting", "Dayparting"], ["ads-bids", "Bid analysis"], ["ads-keywords", "Keyword intelligence"]]]] },
   connections: { title: "Connections", groups: [["", [["connections", "All platforms"], ["connections-events", "Webhook events"]]]] },
-  account: { title: "Data and account", groups: [["", [["account-data", "Upload reports"], ["account-channels", "Amazon and Shopify"], ["account-wallet", "Wallet and invoices"], ["account-memory", "Copilot memory"], ["account-settings", "Brand and team"]]]] }
+  account: { title: "Data and account", groups: [["", [["account-data", "Upload reports"], ["account-wallet", "Wallet and invoices"], ["account-memory", "Copilot memory"], ["account-settings", "Brand and team"]]]] }
 };
 const VIEWS = {};
 function route() { const h = (location.hash.slice(1) || "analytics-home").split("?")[0], base = VIEWS[h] ? h : h.replace(/-[a-z0-9_]+$/, ""), sec = base.split("-")[0]; return NAV[sec] && VIEWS[base] ? { h: base, sec, arg: h !== base ? h.slice(base.length + 1) : "" } : { h: "analytics-home", sec: "analytics", arg: "" }; }
@@ -148,7 +148,7 @@ function render() {
 addEventListener("hashchange", () => { render(); $("work").scrollTop = 0; });
 
 async function reload(silent) {
-  try { S.D = await api("GET", "/api/data"); shape(S.D); render(); }
+  try { S.D = await api("GET", "/api/data"); shape(S.D); S.ordD = null; S.ordKey = null; render(); }
   catch (e) { if (!silent) toast(e.message); }
 }
 

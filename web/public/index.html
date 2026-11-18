@@ -74,6 +74,11 @@ a{color:var(--accent)}
 .clogo img{width:78%;height:78%;object-fit:contain}
 .linkbtn{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-weight:700;text-decoration:underline;cursor:pointer}
 code.trunc{font-size:12px;color:var(--ink2);display:inline-block;max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+.ordbar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding:14px}
+.ordbar label.f{min-width:150px}.ordbar label.f.grow{flex:1;min-width:220px}
+.pager{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}.pager .grow{flex:1}
+span.trunc{display:inline-block;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+.modal:has(.ordmodal){width:min(920px,94vw);max-width:none}
 .side .ver{margin:14px 10px 2px;font-size:11.5px;color:var(--muted);line-height:1.5}
 /* main */
 .main{display:flex;flex-direction:column;min-width:0;height:100%}
@@ -317,7 +322,7 @@ svg.ch .grid line{stroke:var(--line)}
     <a href="#analytics-home" data-sec="analytics" aria-label="Analytics"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V5M16 20v-6M21 20H3"/></svg><span class="lbl">Analytics</span></a>
     <a href="#ads-overview" data-sec="ads" aria-label="Ads"><svg viewBox="0 0 24 24"><path d="M4 10v4l11 5V5L4 10Z"/><path d="M15 9a3 3 0 0 1 0 6M7 14v4"/></svg><span class="lbl">Ads</span></a>
     <a href="#connections" data-sec="connections" aria-label="Connections"><svg viewBox="0 0 24 24"><path d="M9 7V3M15 7V3"/><path d="M6 7h12v4a6 6 0 0 1-12 0V7Z"/><path d="M12 17v4"/></svg><span class="lbl">Connections</span></a>
-    <a href="#account-channels" data-sec="account" aria-label="Channels and account"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7.5l3 8M16 7.5l-3 8M8.5 6h7"/></svg><span class="lbl">Account</span></a>
+    <a href="#account-data" data-sec="account" aria-label="Data and account"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7.5l3 8M16 7.5l-3 8M8.5 6h7"/></svg><span class="lbl">Account</span></a>
     <span class="sp"></span>
     <button class="iconbtn" id="themeBtn" type="button" aria-label="Switch light or dark" style="background:transparent;border-color:rgba(255,255,255,.15);color:#9AA29F;margin-bottom:8px"><svg viewBox="0 0 24 24"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10Z"/></svg></button>
     <button class="avatar" id="userBtn" type="button" aria-label="Account menu">··</button>
@@ -346,6 +351,7 @@ svg.ch .grid line{stroke:var(--line)}
 <script src="views-account.js"></script>
 <script src="views-shopify.js"></script>
 <script src="views-connections.js"></script>
+<script src="views-orders.js"></script>
 <script src="events.js"></script>
 </body>
 </html>

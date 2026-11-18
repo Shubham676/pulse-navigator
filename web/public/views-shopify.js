@@ -18,7 +18,7 @@ VIEWS["analytics-shopify"] = () => {
   const X = S.shop;
   if (X.error) return head("Shopify store", "") + `<section class="card empty-state"><h3>Could not load Shopify data</h3><p>${esc(X.error)}</p></section>`;
   if (!X.connected) return head("Shopify store", "Sales from your own website, next to your marketplace data.")
-    + `<section class="card empty-state"><h3>Connect your Shopify store</h3><p style="margin:0;color:var(--ink2);max-width:62ch">Pulse reads orders, discount codes, COD and prepaid mix, products and stock from Shopify every few hours. It never changes anything in your store.</p><div><a class="btn pri" href="#account-channels">Connect Shopify</a></div></section>`;
+    + `<section class="card empty-state"><h3>Connect your Shopify store</h3><p style="margin:0;color:var(--ink2);max-width:62ch">Pulse reads orders, discount codes, COD and prepaid mix, products and stock from Shopify every few hours. It never changes anything in your store.</p><div><a class="btn pri" href="#connections-shopify">Connect Shopify</a></div></section>`;
   const st = X.store, days = shopDays(X.daily), n = PER[S.period][0], a = shopRange(days, n), b = shopRange(days, n, n);
   const aov = r => r.orders ? r.net / r.orders : 0, sync = st.lastSync ? `Synced ${fmtDT(st.lastSync)}` : "First sync running";
   if (!st.lastSync && !X.daily.length) return head(esc(st.name || "Shopify store"), esc(st.domain || st.shop))
@@ -27,7 +27,7 @@ VIEWS["analytics-shopify"] = () => {
   const repeatPct = X.repeat?.customers ? X.repeat.repeaters / X.repeat.customers : 0;
   return head(esc(st.name || "Shopify store"), `${esc(st.domain || st.shop)} · ${sync} · compared with the ${PER[S.period][1]}`, `<div style="display:flex;gap:8px;align-items:center">${periodSeg()}<button type="button" class="btn sm" data-act="shoprefresh">Refresh</button></div>`)
     + strip([
-      st.error ? { t: "bad", h: "Sync needs attention", p: `${esc(st.error)} <a href="#account-channels">Open connections</a>` } : null,
+      st.error ? { t: "bad", h: "Sync needs attention", p: `${esc(st.error)} <a href="#connections-shopify">Open the Shopify connection</a>` } : null,
       b.net ? { t: a.net >= b.net ? "ok" : "bad", h: `Net sales ${a.net >= b.net ? "up" : "down"} ${pct(Math.abs(a.net - b.net) / b.net)}`, p: `${inr(a.net)} against ${inr(b.net)}.` } : null,
       lowStock.length ? { t: "warn", h: `${lowStock.length} variant${lowStock.length > 1 ? "s" : ""} under 2 weeks of stock`, p: lowStock.slice(0, 2).map(v => esc(v.sku || v.product)).join(", ") + (lowStock.length > 2 ? "…" : ".") } : null])
     + `<div class="kpis">${kpi("Net sales", a.net, b.net, inr, false)}${kpi("Orders", a.orders, b.orders)}${kpi("Average order", aov(a), aov(b), inr)}${kpi("COD share", a.orders ? a.cod / a.orders : 0, b.orders ? b.cod / b.orders : 0, v => pct(v), true)}${kpi("Cancelled or refunded", a.cancelled, b.cancelled, num, true)}</div>`

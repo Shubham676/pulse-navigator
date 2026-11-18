@@ -51,7 +51,7 @@ VIEWS["connections"] = arg => {
       if (!list.length) return "";
       return `<h3 class="csec">${esc(cat)}</h3><div class="ctiles">${list.map(p => {
         const [al, ac] = ACCESS[p.access];
-        return `<a class="ctile" href="#${p.access === "live" ? "account-channels" : "connections-" + p.id}">${logoTile(p)}<span class="cname"><b>${esc(p.name)}</b><span class="cpills"><span class="pill ${ac}">${al}</span>${statusPill(st(p))}</span></span></a>`;
+        return `<a class="ctile" href="#connections-${p.id}">${logoTile(p)}<span class="cname"><b>${esc(p.name)}</b><span class="cpills"><span class="pill ${ac}">${al}</span>${statusPill(st(p))}</span></span></a>`;
       }).join("")}</div>`;
     }).join("")
     + (shown.length ? "" : `<div class="empty">No platform matches “${esc(S.intQ)}”. Use <a href="#connections-webhook_in">Incoming webhook</a> to connect any other system.</div>`)
@@ -61,8 +61,11 @@ VIEWS["connections"] = arg => {
 function connectionPage(id) {
   const p = S.intCat.platforms.find(x => x.id === id);
   if (!p) return head("Not found", "") + `<a href="#connections">Back to connections</a>`;
-  if (p.access === "live") { location.hash = "account-channels"; return ""; }
-  const it = intOf(p.id), [al, ac, ad] = ACCESS[p.access], admin = isAdmin();
+  const [al, ac, ad] = ACCESS[p.access];
+  const top = `<p style="margin:0 0 10px"><a href="#connections">← All connections</a></p>`
+    + `<div class="ph"><div class="grow" style="display:flex;gap:14px;align-items:center">${logoTile(p, 56)}<div><h2 style="margin:0">${esc(p.name)}</h2><p style="margin:4px 0 0"><span class="pill ${ac}">${al}</span> <span class="note">${esc(ad)}</span></p></div></div></div>`;
+  if (p.access === "live") return top + (p.note ? `<div class="lcd" style="margin-bottom:14px">${esc(p.note)}</div>` : "") + liveConnectionPage(p.id);
+  const it = intOf(p.id), admin = isAdmin();
   if (it && p.webhook && canEdit() && !(S.intEvents || {})[p.id]) {
     S.intEvents = S.intEvents || {}; S.intEvents[p.id] = { loading: true };
     api("GET", "/api/integrations/events?platform=" + encodeURIComponent(p.id)).then(r => { S.intEvents[p.id] = r; render(); }).catch(() => { S.intEvents[p.id] = { events: [] }; });
@@ -90,8 +93,7 @@ function connectionPage(id) {
       <p class="note">${how}</p>
       ${admin ? `<p class="note">Address leaked? <button type="button" class="linkbtn" data-act="introtate" data-id="${p.id}">Get a new address and secret</button>. The old one stops working at once.</p>` : ""}
       <h4 style="margin:18px 0 6px">Recent events</h4>${!canEdit() ? `<p class="note">Members and above can see events.</p>` : !ev || ev.loading ? `<p class="note">Loading…</p>` : eventsTable(ev.events, false)}`, { right: it ? `<span class="pill info">${num(it.events)} received</span>` : "" });
-  return `<p style="margin:0 0 10px"><a href="#connections">← All connections</a></p>`
-    + `<div class="ph"><div class="grow" style="display:flex;gap:14px;align-items:center">${logoTile(p, 56)}<div><h2 style="margin:0">${esc(p.name)}</h2><p style="margin:4px 0 0"><span class="pill ${ac}">${al}</span> <span class="note">${esc(ad)}</span></p></div></div></div>`
+  return top
     + (p.note ? `<div class="lcd" style="margin-bottom:14px">${esc(p.note)}</div>` : "")
     + `<div class="grid g2">${card(p.id === "webhook_out" ? "Where to send events" : p.fields.length ? "API connection" : "Connection", form + statusLine + actions + (p.id === "webhook_out" ? secretRow : ""))}${webhookCard}</div>`;
 }

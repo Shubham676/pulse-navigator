@@ -19,6 +19,7 @@ import walletRoutes from "./routes/wallet.js";
 import connectionRoutes from "./routes/connections.js";
 import shopifyRoutes from "./routes/shopify.js";
 import integrationRoutes from "./routes/integrations.js";
+import orderRoutes from "./routes/orders.js";
 
 const webDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "web", "public");
 
@@ -76,6 +77,7 @@ export async function buildApp({ logger = true } = {}) {
   await app.register(connectionRoutes);
   await app.register(shopifyRoutes);
   await app.register(integrationRoutes);
+  await app.register(orderRoutes);
 
   await app.register(fstatic, { root: webDir, prefix: "/", index: ["index.html"], cacheControl: false });
   app.addHook("onSend", async (req, reply, payload) => {

@@ -1,6 +1,6 @@
 "use strict";
 /* Ads pages: overview with insights, campaign manager, reports and tools. */
-const noAds = title => head(title, "") + `<section class="card empty-state"><h3>No ads data yet</h3><p style="margin:0;color:var(--ink2)">Upload your Sponsored Products, Brands and Display campaign reports and the search term report, or connect your Amazon Ads account.</p><div style="display:flex;gap:8px"><a class="btn pri" href="#account-data-ads">Upload ads reports</a><a class="btn" href="#account-channels">Connect Amazon Ads</a></div></section>`;
+const noAds = title => head(title, "") + `<section class="card empty-state"><h3>No ads data yet</h3><p style="margin:0;color:var(--ink2)">Upload your Sponsored Products, Brands and Display campaign reports and the search term report, or connect your Amazon Ads account.</p><div style="display:flex;gap:8px"><a class="btn pri" href="#account-data-ads">Upload ads reports</a><a class="btn" href="#connections-amazon">Connect Amazon Ads</a></div></section>`;
 const changeLog = () => S.D.changes.length ? `<p class="note" style="margin-top:12px"><b>Recent changes:</b> ${S.D.changes.slice(0, 6).map(l => `${esc(l.action)}${l.detail?.name ? ": " + esc(l.detail.name) : ""} (${fmtDT(l.at)}${l.pushed ? ", sent to Amazon" : l.push_error ? ", not sent: " + esc(l.push_error.slice(0, 80)) : ", saved in Pulse"})`).join(" · ")}</p>` : "";
 
 VIEWS["ads-overview"] = () => {

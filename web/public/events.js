@@ -104,6 +104,8 @@ document.addEventListener("click", async e => {
     case "disconnect": confirmModal("Disconnect?", `<p style="margin:0">Pulse stops pulling data from this account. Data already imported stays.</p>`, "Disconnect", async btn => { if (await act(() => api("DELETE", `/api/connections/${d.id}`), btn, "Disconnected")) { closeModal(); S.conns = null; S.shop = null; render(); } }); break;
     case "delmem": if (await act(() => api("DELETE", `/api/memory/${d.id}`))) await reload(true); break;
     case "rmmember": confirmModal("Remove from brand?", `<p style="margin:0">They lose access to ${esc(S.D.org.name)} straight away.</p>`, "Remove", async btn => { if (await act(() => api("DELETE", `/api/team/${d.id}`), btn, "Removed")) { closeModal(); S.team = null; render(); } }); break;
+    case "ordpage": S.ordF.page = Math.max(1, Number(d.p)); render(); $("work")?.scrollTo?.({ top: 0 }); break;
+    case "ordview": ordView(d.ch, d.id); break;
     case "copy": { const el = $(d.copy); if (el) navigator.clipboard.writeText(el.value).then(() => toast("Copied"), () => { el.type = "text"; el.select(); toast("Select it and copy"); }); break; }
     case "intshow": { const el = $("intSecret"); el.type = el.type === "password" ? "text" : "password"; b.textContent = el.type === "password" ? "Show" : "Hide"; break; }
     case "inttest": { const r = await act(() => api("POST", `/api/integrations/${d.id}/test`), b); if (r) { toast(r.message); intReset(); render(); } break; }
@@ -126,6 +128,12 @@ addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); $("dr
 document.addEventListener("change", async e => {
   const t = e.target, d = t.dataset;
   if (t.id === "upFiles") { uploadFiles(t.files); t.value = ""; return; }
+  if (["ordChannel", "ordStatus", "ordPeriod", "ordFrom", "ordTo"].includes(t.id)) {
+    const k = { ordChannel: "channel", ordStatus: "status", ordPeriod: "period", ordFrom: "from", ordTo: "to" }[t.id];
+    S.ordF[k] = t.value; S.ordF.page = 1; S.ordF.q = $("ordQ") ? $("ordQ").value.trim() : S.ordF.q;
+    render();
+    return;
+  }
   if (d.camp) { const c = CAMPAIGNS.find(x => x.id === d.camp), status = t.checked ? "Live" : "Paused"; const r = await act(() => api("POST", `/api/ads/campaigns/${encodeURIComponent(c.id)}`, { status })); if (r) { toast(r.pushed ? `${c.name} ${status === "Live" ? "switched on" : "paused"} on Amazon` : r.error ? `Saved in Pulse; Amazon refused: ${r.error}` : `${c.name} marked ${status === "Live" ? "on" : "paused"} in Pulse`); await reload(true); } else t.checked = !t.checked; return; }
   if (d.budget) { const c = CAMPAIGNS.find(x => x.id === d.budget), v = Math.round(+t.value); if (!(v > 0)) { t.value = c.budget || ""; toast("Enter a budget above zero"); return; } const r = await act(() => api("POST", `/api/ads/campaigns/${encodeURIComponent(c.id)}`, { budget: v })); if (r) { toast(r.pushed ? `Budget set to ${inr(v)} on Amazon` : `Budget saved in Pulse as ${inr(v)}`); await reload(true); } return; }
   if (d.tracker) { if (await act(() => api("PATCH", `/api/ads/trackers/${d.tracker}`, { enabled: t.checked }))) await reload(true); return; }
@@ -135,7 +143,7 @@ document.addEventListener("change", async e => {
   if (t.id === "stdType") { S.stdType = t.value; render(); return; }
   if (t.id === "orgSel") {
     if (t.value === "new") { t.value = String(S.me.org.id); newOrgModal(); return; }
-    if (await act(() => api("POST", "/api/orgs/switch", { orgId: Number(t.value) }))) { Object.assign(S, { imports: null, conns: null, wallet: null, team: null, agents: null, runs: null, chats: [], chatMsgs: [], chatId: null }); await boot(); }
+    if (await act(() => api("POST", "/api/orgs/switch", { orgId: Number(t.value) }))) { Object.assign(S, { imports: null, conns: null, wallet: null, team: null, ordD: null, ordKey: null, ordF: null, ints: null, intEvents: {}, intAllEvents: null, agents: null, runs: null, chats: [], chatMsgs: [], chatId: null }); await boot(); }
     return;
   }
   if (t.id === "lang") render();
@@ -153,6 +161,7 @@ document.addEventListener("submit", async e => {
   e.preventDefault();
   const f = e.target, id = f.id, v = x => ($(x) ? $(x).value.trim() : ""), btn = f.querySelector("button[type=submit]");
   if (id === "authForm") return submitAuth(f);
+  if (id === "ordForm") { Object.assign(S.ordF, { q: v("ordQ"), from: v("ordFrom"), to: v("ordTo"), page: 1 }); render(); return; }
   if (id === "intForm") {
     const fields = Object.fromEntries([...f.querySelectorAll("input[name]")].map(i => [i.name, i.value]));
     const r = await act(() => api("PUT", `/api/integrations/${f.dataset.platform}`, { fields }), btn);
@@ -169,7 +178,7 @@ document.addEventListener("submit", async e => {
   if (id === "orgForm") { if (await act(() => api("PATCH", "/api/org", { name: v("oName"), targetAcos: Number(v("oAcos")), feeRate: Number(v("oFee")) / 100 }), btn, "Settings saved")) { await reload(true); S.me = await api("GET", "/api/me"); } return; }
   if (id === "billForm") { if (await act(() => api("PATCH", "/api/org", { billing: { name: v("bName"), gstin: v("bGst").toUpperCase(), stateCode: v("bState"), address: v("bAddr") } }), btn, "Billing details saved")) await reload(true); return; }
   if (id === "inviteForm") { const r = await act(() => api("POST", "/api/team/invite", { email: v("invEmail"), role: v("invRole") }), btn); if (r) { $("invOut").innerHTML = `<div class="lcd" style="margin-top:12px">Send this link to ${esc(v("invEmail"))}. It works for 14 days.<div style="display:flex;gap:8px;margin-top:8px"><input class="inp" id="invLink" readonly value="${esc(r.link)}"><button type="button" class="btn" data-act="copyinvite">Copy</button></div></div>`; S.team = null; } return; }
-  if (id === "orgNewForm") { const n = v("newOrgName"); if (!n) return toast("Enter the brand name"); if (await act(() => api("POST", "/api/orgs", { name: n }), btn)) { closeModal(); Object.assign(S, { imports: null, conns: null, wallet: null, team: null, chats: [], chatMsgs: [], chatId: null }); await boot(); } return; }
+  if (id === "orgNewForm") { const n = v("newOrgName"); if (!n) return toast("Enter the brand name"); if (await act(() => api("POST", "/api/orgs", { name: n }), btn)) { closeModal(); Object.assign(S, { imports: null, conns: null, wallet: null, team: null, ordD: null, ordKey: null, ordF: null, ints: null, intEvents: {}, intAllEvents: null, chats: [], chatMsgs: [], chatId: null }); await boot(); } return; }
   if (id === "spForm") { if (await act(() => api("POST", "/api/connections/sp-api", { refreshToken: v("spRt"), clientId: v("spCid") || undefined, clientSecret: v("spCs") || undefined }), btn, "Seller account connected. The first sync takes 10–30 minutes.")) { S.conns = null; render(); } return; }
   if (id === "shopForm") { const tok = v("shTok"); if (await act(() => api("POST", "/api/connections/shopify", tok ? { shop: v("shShop"), accessToken: tok } : { shop: v("shShop"), clientId: v("shCid"), clientSecret: v("shCs") }), btn, r => `Connected to ${r.account}. The first sync takes a few minutes.`)) { S.conns = null; S.shop = null; render(); } return; }
   if (id === "adForm") { if (await act(() => api("POST", "/api/connections/ads-api", { refreshToken: v("adRt"), clientId: v("adCid") || undefined, clientSecret: v("adCs") || undefined }), btn, r => `Connected to ${r.account}. The first sync takes 10–30 minutes.`)) { S.conns = null; render(); } return; }

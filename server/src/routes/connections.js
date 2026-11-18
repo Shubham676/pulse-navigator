@@ -108,8 +108,8 @@ export default async function connectionRoutes(app) {
   app.get("/api/connections/:kind/oauth/callback", async (req, reply) => {
     const s = checkState(req.query.state, req.cookies.pulse_oauth);
     reply.clearCookie("pulse_oauth", { path: basePath(req) + "/api/connections" });
-    if (!s) return reply.redirect(basePath(req) + "/#account-channels?error=expired");
-    if (!await one("select 1 from memberships where org_id=$1 and user_id=$2 and role in ('owner','admin')", [s.orgId, s.userId])) return reply.redirect(basePath(req) + "/#account-channels");
+    if (!s) return reply.redirect(basePath(req) + "/#connections-amazon?error=expired");
+    if (!await one("select 1 from memberships where org_id=$1 and user_id=$2 and role in ('owner','admin')", [s.orgId, s.userId])) return reply.redirect(basePath(req) + "/#connections-amazon");
     try {
       if (req.params.kind === "sp-api") {
         const refreshToken = await exchangeCode({ clientId: config.amazon.lwaClientId, clientSecret: config.amazon.lwaClientSecret, code: req.query.spapi_oauth_code, redirectUri: `${config.publicUrl}/api/connections/sp-api/oauth/callback` });
@@ -119,10 +119,10 @@ export default async function connectionRoutes(app) {
         const p = await pickAdsProfile(adsCredentials({ secret_enc: encrypt({ refreshToken }), config: {} }));
         await saveConnection(s.orgId, "ads_api", { profileId: p.profileId, accountName: p.accountInfo?.name || "", countryCode: p.countryCode }, { refreshToken });
       }
-      return reply.redirect(basePath(req) + "/#account-channels");
+      return reply.redirect(basePath(req) + "/#connections-amazon");
     } catch (e) {
       req.log.error(e);
-      return reply.redirect(basePath(req) + "/#account-channels");
+      return reply.redirect(basePath(req) + "/#connections-amazon");
     }
   });
 
