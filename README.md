@@ -27,7 +27,7 @@ One Node.js service serves the web app, the API and a background worker. Data li
 
 ## Connections hub
 
-The **Connections** menu lists 34 platforms (Indian marketplaces, quick commerce, own-store platforms, global marketplaces, shipping and order management, custom webhooks). Amazon and Shopify sync fully from **Account › Amazon and Shopify**. For the others, each brand saves API credentials (AES-256-GCM encrypted), runs **Test connection** where a test exists, and gets a webhook address `PUBLIC_URL/api/webhooks/in/<token>`.
+The **Connections** menu lists 32 platforms (Indian marketplaces, quick commerce, own-store platforms, global marketplaces, shipping and order management, custom webhooks). Amazon and Shopify sync fully from **Account › Amazon and Shopify**. For the others, each brand saves API credentials (AES-256-GCM encrypted), runs **Test connection** where a test exists, and gets a webhook address `PUBLIC_URL/api/webhooks/in/<token>`.
 
 - Catalog: `server/src/integrations/catalog.js`; tests per platform: `server/src/integrations/testers.js`; routes: `server/src/routes/integrations.js`.
 - Webhook checks: WooCommerce `X-WC-Webhook-Signature`; everything else `X-Pulse-Signature: sha256=<hex HMAC-SHA256 of the body>` with the connection's signing secret. Unsigned events are stored as unverified. The last 500 events per connection are kept.

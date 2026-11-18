@@ -4,7 +4,7 @@ Newest first. The version and date also show at the bottom of the app's side men
 
 ## 1.3.0 (18 Nov 2026)
 
-- New **Connections** menu in the left bar: 34 platforms in one place, grouped as Indian marketplaces, quick commerce, your own store, global marketplaces, shipping and order management, and custom connections. Search by name.
+- New **Connections** menu in the left bar: 32 platforms in one place, grouped as Indian marketplaces, quick commerce, your own store, global marketplaces, shipping and order management, and custom connections. Search by name.
 - Amazon and Shopify are marked "Live sync" and open their existing connection page (now called **Account › Amazon and Shopify**).
 - Every other platform has its own page to save API credentials (stored encrypted, never shown again in full). "Test connection" checks them against the platform's API for WooCommerce, Flipkart, BigCommerce, Adobe Commerce (Magento), Shiprocket and outgoing webhooks.
 - Every connection gets its own webhook address. WooCommerce signatures are verified; other platforms can sign with the connection's signing secret (header X-Pulse-Signature). Events are listed under Connections › Webhook events.
