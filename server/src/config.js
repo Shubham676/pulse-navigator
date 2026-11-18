@@ -26,11 +26,13 @@ export const config = {
   allowSignup: env.ALLOW_SIGNUP !== "false",
   maxUploadMb: Number(env.MAX_UPLOAD_MB || 40),
 
-  ai: {
-    apiKey: env.ANTHROPIC_API_KEY || "",
-    model: env.AI_MODEL || "claude-haiku-5-5",
-    maxTokens: Number(env.AI_MAX_TOKENS || 900)
-  },
+  // AI provider: Claude (ANTHROPIC_API_KEY) or DeepSeek (DEEPSEEK_API_KEY). AI_PROVIDER picks one when both keys are set.
+  ai: (() => {
+    const provider = env.AI_PROVIDER === "deepseek" || (env.AI_PROVIDER !== "anthropic" && !env.ANTHROPIC_API_KEY && env.DEEPSEEK_API_KEY) ? "deepseek" : "anthropic";
+    return provider === "deepseek"
+      ? { provider, apiKey: env.DEEPSEEK_API_KEY || "", model: env.AI_MODEL || "deepseek-flash", baseUrl: env.AI_BASE_URL || "https://api.deepseek.com", maxTokens: Number(env.AI_MAX_TOKENS || 900) }
+      : { provider, apiKey: env.ANTHROPIC_API_KEY || "", model: env.AI_MODEL || "claude-haiku-5-5", baseUrl: env.AI_BASE_URL || "https://api.anthropic.com", maxTokens: Number(env.AI_MAX_TOKENS || 900) };
+  })(),
   amazon: {
     // Credentials of OUR registered SP-API / Ads API application (from Seller Central Developer Console and Amazon Ads)
     lwaTokenUrl: env.AMAZON_LWA_TOKEN_URL || "https://api.amazon.com/auth/o2/token",

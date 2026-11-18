@@ -2,6 +2,10 @@
 
 Newest first. The version and date also show at the bottom of the app's side menu.
 
+## 1.8.0 (18 Nov 2026)
+
+- Copilot and the AI agents can run on DeepSeek. Set `DEEPSEEK_API_KEY` on the server (model `deepseek-flash`; change with `AI_MODEL`). If both a Claude and a DeepSeek key are set, Claude is used unless `AI_PROVIDER=deepseek`.
+
 ## 1.7.2 (18 Nov 2026)
 
 - The dark icon bar and the menu beside it stay in place while the page scrolls. A long menu scrolls on its own.

@@ -13,7 +13,7 @@ One Node.js service serves the web app, the API and a background worker. Data li
 | Data in | Upload of 20 Amazon report types (auto-detected from their columns), plus live sync through the Selling Partner API, the Amazon Ads API and the Shopify GraphQL Admin API (read only) |
 | Analytics | Overview with account health, 8 sales pages, 4 inventory pages, 4 business pages including profit and loss |
 | Ads | Overview with rule-based insights, campaign manager (pause, enable, budget, pushed to Amazon when Ads is connected), 7 report tabs, trackers, dayparting (runs automatically on synced campaigns), bid analysis, keyword next steps |
-| AI | Copilot answers with Claude when `ANTHROPIC_API_KEY` is set, otherwise with rules. Listing optimizer, listing creator and keyword agents use Claude |
+| AI | Copilot answers with Claude when `ANTHROPIC_API_KEY` is set, or DeepSeek when `DEEPSEEK_API_KEY` is set (`AI_PROVIDER` picks one if both are set), otherwise with rules. Listing optimizer, listing creator and keyword agents use Claude |
 | Wallet | Razorpay top-ups with 18% GST, credited once through either the browser callback or the webhook, GST invoice page, automatic refund when an agent fails |
 
 ### Not done yet
