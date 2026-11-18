@@ -111,6 +111,12 @@ document.addEventListener("click", async e => {
     case "inttest": { const r = await act(() => api("POST", `/api/integrations/${d.id}/test`), b); if (r) { toast(r.message); intReset(); render(); } break; }
     case "intdel": confirmModal("Disconnect?", "The saved credentials and webhook address are deleted. Events already received are deleted too.", "Disconnect", async yb => { const r = await act(() => api("DELETE", `/api/integrations/${d.id}`), yb, "Disconnected"); if (r) { closeModal(); intReset(); render(); } }); break;
     case "introtate": confirmModal("Get a new webhook address?", "The current address and signing secret stop working immediately. Update them wherever you set them up.", "Get new address", async yb => { const r = await act(() => api("POST", `/api/integrations/${d.id}/rotate`), yb, "New address ready"); if (r) { closeModal(); intReset(); render(); } }); break;
+    case "costjump": $("costs")?.scrollIntoView({ behavior: "smooth" }); break;
+    case "costadd": costRead().items.push({ sku: "", qty: 1 }); render(); break;
+    case "costrm": { const f = costRead(); f.items.splice(Number(d.i), 1); if (!f.items.length) f.items.push({ sku: "", qty: 1 }); render(); break; }
+    case "costcancel": S.costF = null; render(); break;
+    case "costedit": { const sh = (S.D.costSheets || []).find(x => String(x.id) === d.id); if (sh) { S.costF = { id: sh.id, kind: sh.kind, sku: sh.sku, name: sh.name || "", raw: sh.raw || "", pack: sh.pack || "", mkt: sh.mkt || "", items: sh.items.length ? sh.items.map(x => ({ ...x })) : [{ sku: "", qty: 1 }] }; render(); $("costs")?.scrollIntoView({ behavior: "smooth" }); } break; }
+    case "costdel": confirmModal("Delete this product cost?", "Profit and loss goes back to the cost in Product master for this SKU.", "Delete", async yb => { const r = await act(() => api("DELETE", `/api/costs/${d.id}`), yb, "Deleted"); if (r) { closeModal(); S.costF = null; reload(true); } }); break;
     case "expdel": confirmModal("Delete this expense?", "It is removed from Profit and loss. This can't be undone.", "Delete", async yb => { const r = await act(() => api("DELETE", `/api/expenses/${d.id}`), yb, "Expense deleted"); if (r) { closeModal(); reload(true); } }); break;
     case "intrefresh": S.intAllEvents = null; render(); break;
     case "viewevent": { const all = [...(S.intAllEvents?.events || []), ...Object.values(S.intEvents || {}).flatMap(x => x.events || [])], ev = all.find(x => String(x.id) === d.id);
@@ -128,6 +134,7 @@ addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); $("dr
 
 document.addEventListener("change", async e => {
   const t = e.target, d = t.dataset;
+  if (t.id === "costKind") { costRead().kind = t.value; render(); return; }
   if (t.id === "upFiles") { uploadFiles(t.files); t.value = ""; return; }
   if (["ordChannel", "ordStatus", "ordPeriod", "ordFrom", "ordTo"].includes(t.id)) {
     const k = { ordChannel: "channel", ordStatus: "status", ordPeriod: "period", ordFrom: "from", ordTo: "to" }[t.id];
@@ -162,6 +169,15 @@ document.addEventListener("submit", async e => {
   e.preventDefault();
   const f = e.target, id = f.id, v = x => ($(x) ? $(x).value.trim() : ""), btn = f.querySelector("button[type=submit]");
   if (id === "authForm") return submitAuth(f);
+  if (id === "costForm") {
+    const c = costRead(), n = x => Number(String(x || "0").replace(/[₹,\s]/g, ""));
+    if (!c.sku) { toast(c.kind === "bundle" ? "Enter the bundle's SKU." : "Choose a product."); return; }
+    if ([c.raw, c.pack, c.mkt].some(x => !(n(x) >= 0))) { toast("Costs must be numbers, zero or more."); return; }
+    const items = c.items.filter(x => x.sku);
+    if (c.kind === "bundle" && !items.length) { toast("Add at least one product to the bundle."); return; }
+    const r = await act(() => api("PUT", "/api/costs", { sku: c.sku, name: c.name, kind: c.kind, rawMaterial: n(c.raw), packaging: n(c.pack), marketing: n(c.mkt), items }), btn, "Saved");
+    if (r) { S.costF = null; reload(true); } return;
+  }
   if (id === "expForm") {
     const amt = Number(v("expAmt").replace(/[₹,\s]/g, ""));
     if (!v("expDate") || !(amt > 0)) { toast("Enter a date and an amount above zero."); return; }

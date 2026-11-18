@@ -28,6 +28,26 @@ const colorOf = s => { let h = 0; for (const c of String(s)) h = (h * 31 + c.cha
 /* ---------- data shaping: turns the API payload into the arrays the pages use ---------- */
 let SKUS = [], DAILY = [], LONG = [], CAMPAIGNS = [], SEARCH_TERMS = [], HOURLY = Array(24).fill(0), DAYS = 120, TODAY = new Date();
 const FEE = () => S.D?.org.feeRate ?? 0.2;
+/* Cost sheets (Profit and loss > Product costs): per-unit raw material, packaging and marketing, and bundles of other
+   products. A SKU with a sheet uses the sheet's total as its cost (cogs) everywhere; costParts holds the split. */
+let COST_SHEETS = new Map();
+function costOf(sku, base, depth = 0) {
+  const sh = COST_SHEETS.get(sku);
+  if (!sh) return base.has(sku) && base.get(sku) != null ? { raw: 0, pack: 0, mkt: 0, other: base.get(sku), total: base.get(sku), missing: [] } : null;
+  const c = { raw: sh.raw, pack: sh.pack, mkt: sh.mkt, other: 0, missing: [] };
+  if (sh.kind === "bundle") for (const it of sh.items || []) {
+    const x = depth < 5 ? costOf(it.sku, base, depth + 1) : null;
+    if (!x) { c.missing.push(it.sku); continue; }
+    c.raw += x.raw * it.qty; c.pack += x.pack * it.qty; c.mkt += x.mkt * it.qty; c.other += x.other * it.qty; c.missing.push(...x.missing);
+  }
+  c.total = c.raw + c.pack + c.mkt + c.other;
+  return c;
+}
+function applyCostSheets(sheets) {
+  COST_SHEETS = new Map(sheets.map(x => [x.sku, x]));
+  const base = new Map(SKUS.map(s => [s.sku, s.cogs]));
+  for (const s of SKUS) { s.cogsEntered = s.cogs; if (COST_SHEETS.has(s.sku)) { const c = costOf(s.sku, base); s.costParts = c; s.cogs = c.total; } }
+}
 function shape(D) {
   TODAY = new Date(ymdIST(new Date()) + "T00:00:00+05:30");
   const key = (d, sku) => d + "|" + sku, byDaySku = new Map(), ret = new Map(), ord = new Map(D.dayOrders.map(r => [r.d, r]));
@@ -50,6 +70,7 @@ function shape(D) {
       mapped: [D.org.marketplace, ...(links.get(sku) || [])], suppressed: p.status === "Suppressed" ? (p.suppressed_reason || "Suppressed") : null, status: p.status, inventoryAsOf: p.inventory_as_of,
       sessions: traffic.get(sku)?.sessions ?? null, buyBox: traffic.get(sku)?.buy_box ?? null, titleLength: p.title_length, channel: p.channel || "amazon" };
   });
+  applyCostSheets(D.costSheets || []);
   CAMPAIGNS = D.campaigns.map(c => ({ ...c, budget: c.budget || 0, start: c.start ? new Date(c.start) : null }));
   SEARCH_TERMS = D.terms.map(t => ({ ...t, bid: t.clicks ? t.spend / t.clicks : 0 }));
   HOURLY = Array(24).fill(0); D.hourly.forEach(h => (HOURLY[h.h] = h.units));

@@ -3,6 +3,7 @@
 import { many, one } from "../db.js";
 import { requireAuth, requireOrg } from "../lib/auth.js";
 import { shopifyFeed, mergeShopify } from "./shopify-feed.js";
+import { COST_COLS } from "./costs.js";
 
 const IST = "Asia/Kolkata";
 
@@ -79,6 +80,7 @@ export async function loadData(org) {
   const shop = await shopifyFeed(id);
   const expenses = await P(`select id, spent_on::text as date, category, description, amount::float8 as amount, monthly from expenses
     where org_id=$1 and (monthly or spent_on >= (now() - interval '400 days')::date) order by spent_on desc, id desc`);
+  const costSheets = await P(`select ${COST_COLS} from cost_sheets where org_id=$1 order by kind, sku`);
   const orgRow = await one("select name, marketplace, target_acos, fee_rate, wallet_paise, billing_name, billing_gstin, billing_state_code, billing_address from orgs where id=$1", [id]);
   return mergeShopify({
     asOf: new Date().toISOString(),
@@ -86,7 +88,7 @@ export async function loadData(org) {
       billing: { name: orgRow.billing_name, gstin: orgRow.billing_gstin, stateCode: orgRow.billing_state_code, address: orgRow.billing_address } },
     products, daily, dayOrders, dayReturns, hourly, dowHour, heat7, orders, returns, geo, splits,
     campaigns, adDaily, terms, placements, coupons, deals, health, txBuckets, txSku, repeat, traffic, trafficDay, imports, trackers, dayparts, memory, changes, negatives, links,
-    expenses,
+    expenses, costSheets,
     connections: conns.map(c => ({ kind: c.kind, status: c.status, lastSync: c.last_sync_at, error: c.last_error, account: c.config?.accountName || null })),
     channels: { amazon: daily.length > 0 || products.length > 0, shopify: false }
   }, shop);

@@ -2,6 +2,13 @@
 
 Newest first. The version and date also show at the bottom of the app's side menu.
 
+## 1.7.0 (18 Nov 2026)
+
+- Profit and loss: new "Product costs" section. For each product enter raw material, packaging and marketing cost per unit. Bundles: pick the products in the bundle with quantities, plus the bundle's own packaging, raw material and marketing. A bundle's cost adds up its products' costs (from this section, or Product master when a product has none here).
+- These costs replace the Product master cost for that SKU everywhere, so Profit after COGS and Profit by SKU use them. The Expenses list splits product cost into raw material, packaging, marketing and other.
+- The "Edit costs" button on Profit and loss is now "Product costs" and jumps to the new section.
+- New table `cost_sheets` (migration 007) and API: PUT /api/costs (add or update by SKU), DELETE /api/costs/:id. Included in /api/data as costSheets.
+
 ## 1.6.0 (18 Nov 2026)
 
 - Profit and loss: new "Your expenses" section to enter expenses by hand (date, category, note, amount). Entries can repeat every month. They are added to the expenses list, the "where each rupee goes" bar and profit, grouped by category. Members and admins can add and delete; viewers see them.

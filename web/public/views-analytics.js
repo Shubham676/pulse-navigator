@@ -224,8 +224,43 @@ function expenseCard(inWin) {
     + (older.length ? `<details style="margin-top:10px"><summary class="note" style="cursor:pointer">Older entries (${older.length})</summary>${tbl(older)}</details>` : ""),
     { sub: "Costs that no report brings in: rent, salaries, packaging and so on. They are included in the expenses and profit above. A monthly expense counts once in every 30 days until you delete it." });
 }
+/* Product costs: per-unit cost sheets for products and bundles (see costOf in core.js). */
+const costBlank = () => ({ id: null, kind: "product", sku: "", name: "", raw: "", pack: "", mkt: "", items: [{ sku: "", qty: 1 }] });
+function costRead() {
+  const f = S.costF || (S.costF = costBlank()), g = id => ($(id) ? $(id).value.trim() : null);
+  if (!$("costForm")) return f;
+  f.sku = g("costSku") ?? f.sku; f.name = g("costName") ?? f.name; f.raw = g("costRaw") ?? f.raw; f.pack = g("costPack") ?? f.pack; f.mkt = g("costMkt") ?? f.mkt;
+  if (f.kind === "bundle") f.items = [...document.querySelectorAll(".costItem")].map((el, i) => ({ sku: el.value.trim(), qty: Math.max(1, parseInt(document.querySelectorAll(".costQty")[i]?.value, 10) || 1) }));
+  return f;
+}
+function costCard(units30) {
+  const f = S.costF || (S.costF = costBlank()), edit = S.me?.org?.role !== "viewer", sheets = S.D.costSheets || [];
+  const nameOf = sku => { const s = SKUS.find(x => x.sku === sku), sh = COST_SHEETS.get(sku); return sh?.name || (s && s.name !== sku ? s.name : "") || sku; };
+  const opts = [...new Map([...[...SKUS].sort((a, b) => (units30.get(b.sku) || 0) - (units30.get(a.sku) || 0)).map(s => [s.sku, s.name]), ...sheets.map(x => [x.sku, x.name || x.sku])])].map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join("");
+  const base = new Map(SKUS.map(s => [s.sku, s.cogsEntered])), r = v => v ? inr(v, 2) : "–", bundle = f.kind === "bundle";
+  const numInp = (id, label, val) => `<label class="f">${label}<input class="inp" id="${id}" inputmode="decimal" placeholder="0.00" value="${esc(val)}"></label>`;
+  const form = !edit ? `<p class="note">Only members and admins can change product costs.</p>` : `<form id="costForm" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">
+    <datalist id="costSkus">${opts}</datalist>
+    <div class="form"><label class="f">Type<select class="inp" id="costKind"><option value="product"${bundle ? "" : " selected"}>Single product</option><option value="bundle"${bundle ? " selected" : ""}>Bundle of products</option></select></label>
+      <label class="f">${bundle ? "Bundle SKU" : "Product"}<input class="inp" id="costSku" list="costSkus" value="${esc(f.sku)}" placeholder="${bundle ? "SKU you sell the bundle under" : "Search a product or type its SKU"}" ${f.id ? "readonly" : ""} required></label>
+      ${bundle ? `<label class="f">Bundle name<input class="inp" id="costName" maxlength="200" value="${esc(f.name)}" placeholder="e.g. Starter pack: 3 diapers + 6 inserts"></label>` : ""}</div>
+    ${bundle ? `<div class="f" style="font-size:12.5px;font-weight:600;color:var(--ink2)">Products in this bundle${f.items.map((it, i) => `<div style="display:flex;gap:8px;margin-top:6px"><input class="inp costItem" list="costSkus" value="${esc(it.sku)}" placeholder="Search a product" aria-label="Product ${i + 1}" style="flex:1"><input class="inp costQty" type="number" min="1" max="1000" value="${it.qty}" aria-label="Quantity" style="width:90px"><button type="button" class="btn sm ghost" data-act="costrm" data-i="${i}" aria-label="Remove product"${f.items.length < 2 ? " disabled" : ""}>Remove</button></div>`).join("")}<div style="margin-top:8px"><button type="button" class="btn sm" data-act="costadd">+ Add product</button></div></div>` : ""}
+    <div class="form">${numInp("costRaw", bundle ? "Extra raw material (₹ per bundle)" : "Raw material (₹ per unit)", f.raw)}${numInp("costPack", bundle ? "Bundle packaging (₹ per bundle)" : "Packaging (₹ per unit)", f.pack)}${numInp("costMkt", bundle ? "Marketing (₹ per bundle)" : "Marketing (₹ per unit)", f.mkt)}
+      <div style="display:flex;gap:8px"><button class="btn pri" type="submit">${f.id ? "Save changes" : bundle ? "Save bundle" : "Save product cost"}</button>${f.id ? `<button type="button" class="btn" data-act="costcancel">Cancel</button>` : ""}</div></div>
+    ${bundle ? `<p class="note" style="margin:0">A bundle's cost is the cost of each product in it times its quantity, plus the bundle's own costs above.</p>` : ""}</form>`;
+  const rows = sheets.map(sh => {
+    const c = costOf(sh.sku, base), sold = units30.get(sh.sku) || 0;
+    const contents = sh.kind === "bundle" ? sh.items.map(it => `${it.qty} × ${esc(nameOf(it.sku))}`).join(", ") : "";
+    return `<tr><td class="l"><b>${esc(nameOf(sh.sku))}</b><br><small class="note">${esc(sh.sku)}</small>${contents ? `<br><small>${contents}</small>` : ""}</td><td class="l">${sh.kind === "bundle" ? `<span class="pill info">Bundle</span>` : "Product"}</td>
+      <td>${r(c.raw)}</td><td>${r(c.pack)}</td><td>${r(c.mkt)}</td><td>${r(c.other)}</td><td><b>${inr(c.total, 2)}</b>${c.missing.length ? `<br><small style="color:var(--bad)">${c.missing.length} item${c.missing.length > 1 ? "s have" : " has"} no cost</small>` : ""}</td><td>${num0(sold)}</td>
+      <td style="white-space:nowrap">${edit ? `<button type="button" class="btn sm ghost" data-act="costedit" data-id="${sh.id}">Edit</button><button type="button" class="btn sm ghost" data-act="costdel" data-id="${sh.id}">Delete</button>` : ""}</td></tr>`;
+  }).join("");
+  const table = sheets.length ? `<div class="tw" style="max-height:480px"><table><thead><tr><th class="l">Product</th><th class="l">Type</th><th>Raw material</th><th>Packaging</th><th>Marketing</th><th>Other cost</th><th>Cost per unit</th><th>Sold, 30 days</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="note">No product costs yet. Add your best sellers first.</p>`;
+  return card("Product costs", form + table, { id: "costs", sub: "Cost per unit, split into raw material, packaging and marketing. These replace the cost in Product master and are used for Profit after COGS. \"Other cost\" is cost from Product master for bundle items without their own costs here." });
+}
+const num0 = v => v ? num(v) : "–";
 VIEWS["analytics-pnl"] = () => {
-  if (!S.D.daily.length && !S.D.txBuckets.length) return emptyPage("Profit and loss", "What came in, what Amazon and ads took, and what is left.") + expenseCard(expensesInWindow());
+  if (!S.D.daily.length && !S.D.txBuckets.length) return emptyPage("Profit and loss", "What came in, what Amazon and ads took, and what is left.") + costCard(new Map()) + expenseCard(expensesInWindow());
   const tb = S.D.txBuckets, exact = tb.length > 0, m = range(30), adsFromReports = adTotals().spend;
   const SHOP_FEE = 0.02, shopRev = sum(DAILY.slice(-30).map(d => d.shopRev || 0)), amzRev = m.rev - shopRev;   // Shopify: payment gateway fee estimate
   const units30 = new Map(SKUS.map(s => [s.sku, skuRange(s.sku, 30).units])), cogs = sum(SKUS.map(s => (units30.get(s.sku) || 0) * (s.cogs || 0))), noCost = SKUS.filter(s => s.cogs == null && units30.get(s.sku)).length;
@@ -243,18 +278,22 @@ VIEWS["analytics-pnl"] = () => {
     income = shopRev > 0 ? [["Amazon sales (from orders)", amzRev], ["Shopify sales (from orders)", shopRev]].filter(x => x[1] > 0) : [["Product sales (from orders)", m.rev]];
     lines = [[`Amazon fees (estimated at ${pct(FEE(), 0)})`, amzRev * FEE()], ...(shopRev > 0 ? [[`Shopify payment gateway fees (estimated at ${pct(SHOP_FEE, 0)})`, shopRev * SHOP_FEE]] : []), ["Cost of advertising", adsFromReports]].filter(x => x[1] > 0 || /advertising/.test(x[0]));
   }
+  const parts = { raw: 0, pack: 0, mkt: 0, other: 0 };
+  for (const s of SKUS) { const u = units30.get(s.sku) || 0; if (!u) continue; const c = s.costParts || { raw: 0, pack: 0, mkt: 0, other: s.cogs || 0 }; for (const k in parts) parts[k] += u * c[k]; }
+  const costLines = (S.D.costSheets || []).length ? [["Product cost: raw material", parts.raw], ["Product cost: packaging", parts.pack], ["Product cost: marketing", parts.mkt], ["Product cost: other (from Product master)", parts.other]].filter(x => x[1] > 0) : [];
+  if (!costLines.length) costLines.push(["Cost of goods (COGS)", cogs]);
   const expWin = expensesInWindow(), expByCat = new Map();
   for (const e of expWin) expByCat.set(e.category, (expByCat.get(e.category) || 0) + e.amount);
   lines.push(...[...expByCat].sort((a, b) => b[1] - a[1]).map(([c, v]) => [`${c} (entered by you)`, v]));
   const ti = sum(income.map(x => x[1])), te = sum(lines.map(x => x[1])), net = ti - te, colors = ["#0E6B62", "#E09A1A", "#6C8EBF", "#B5483B", "#8A9A5B", "#9C6ADE", "#4BA3A3", "#C9A227"];
   const feeBySku = new Map(S.D.txSku.map(r => [r.sku, r]));
-  return head("Profit and loss", `Last 30 days. ${exact ? "Amazon fees from your transaction report." : S.D.channels?.amazon ? "Estimated from orders and ads; upload the Amazon transaction report for exact fees." : "Estimated from orders and ads."}${shopRev > 0 ? " Shopify payment fees are estimated at 2%." : ""}`, `<a class="btn" href="#analytics-pim">Edit costs</a>${copyBtn()}`)
+  return head("Profit and loss", `Last 30 days. ${exact ? "Amazon fees from your transaction report." : S.D.channels?.amazon ? "Estimated from orders and ads; upload the Amazon transaction report for exact fees." : "Estimated from orders and ads."}${shopRev > 0 ? " Shopify payment fees are estimated at 2%." : ""}`, `<button type="button" class="btn" data-act="costjump">Product costs</button>${copyBtn()}`)
     + (exact || !S.D.channels?.amazon ? "" : need("Amazon fees here are an estimate. Upload the date range transaction report from Payments for exact fees, refunds and TCS.", "transactions"))
     + (noCost ? strip([{ t: "warn", h: `${noCost} selling SKU${noCost > 1 ? "s have" : " has"} no cost`, p: "Profit after COGS leaves them out. Add costs in Product master." }]) : "")
     + `<div class="kpis">${kpi("Net sales", ti, null, inr, false, "after refunds and rebates")}${kpi(expWin.length ? "Fees, ads and expenses" : shopRev > 0 ? "Fees and ads" : "Amazon fees and ads", te, null, inr, false, ti ? pct(te / ti) + " of sales" : "")}${kpi(expWin.length ? "Left after expenses" : "Payout", net, null, inr, false, "before product cost")}${kpi("Profit after COGS", net - cogs, null, inr, false, ti ? pct((net - cogs) / ti) + " margin" : "")}</div>`
     + (ti > 0 ? card("Where each rupee of sales goes", `<div class="pnlbar">${lines.filter(e => e[1] > 0).map((e, i) => `<i style="width:${(e[1] / ti * 100).toFixed(2)}%;background:${colors[i % 8]}" title="${esc(e[0])}: ${inr(e[1])}"></i>`).join("")}<i style="width:${Math.max(0, cogs / ti * 100).toFixed(2)}%;background:var(--line2)" title="COGS"></i><i style="flex:1;background:var(--ok)" title="Profit"></i></div><div class="legend">${lines.filter(e => e[1] > 0).map((e, i) => `<span><i style="background:${colors[i % 8]}"></i>${esc(e[0])}</span>`).join("")}<span><i style="background:var(--line2)"></i>COGS</span><span><i style="background:var(--ok)"></i>Profit</span></div>`) : "")
     + `<div class="grid g2">${card("Income", income.map(([l, v]) => `<div class="metric"><span>${esc(l)}</span><b>${inr(v, 2)}</b></div>`).join("") + `<div class="metric"><b>Total income</b><b>${inr(ti, 2)}</b></div>`)}
-      ${card("Expenses", lines.map(([l, v]) => `<div class="metric"><span>${esc(l)}</span><b>${inr(-v, 2)}</b></div>`).join("") + `<div class="metric"><span>Cost of goods (COGS)</span><b>${inr(-cogs, 2)}</b></div><div class="metric"><b>Total expenses</b><b>${inr(-(te + cogs), 2)}</b></div>`)}</div>`
+      ${card("Expenses", lines.map(([l, v]) => `<div class="metric"><span>${esc(l)}</span><b>${inr(-v, 2)}</b></div>`).join("") + `${costLines.map(([l, v]) => `<div class="metric"><span>${esc(l)}</span><b>${inr(-v, 2)}</b></div>`).join("")}<div class="metric"><b>Total expenses</b><b>${inr(-(te + cogs), 2)}</b></div>`)}</div>`
     + card("Profit by SKU", table([{ l: "Product", left: true }, "Sales", "COGS", S.D.channels?.shopify ? "Fees" : "Amazon fees", "Ads", "Profit", "Margin"], SKUS.map(s => { const r = skuRange(s.sku, 30), t = feeBySku.get(s.sku), c = s.cogs == null ? null : r.units * s.cogs, f = t ? -t.fees : r.rev * (s.channel === "shopify" ? SHOP_FEE : FEE()), a = sum(CAMPAIGNS.filter(x => x.sku === s.sku).map(x => x.spend)), p = c == null ? null : r.rev - c - f - a; return { s, r, row: [prod(s), N(r.rev, inr), N(c, inr), N(f, inr), N(a, inr), { v: p ?? "", h: p == null ? "Add cost" : `<b style="color:${p < 0 ? "var(--bad)" : "var(--ok)"}">${inr(p)}</b>` }, N(p == null || !r.rev ? null : p / r.rev, v => pct(v))] }; }).filter(x => x.r.rev).sort((a, b) => b.r.rev - a.r.rev).map(x => x.row), { name: "pnl-by-sku" }), { sub: "Ads cost is only counted for campaigns linked to a product (from the advertised product report). Your own expenses are not split by SKU." })
-    + expenseCard(expWin);
+    + costCard(units30) + expenseCard(expWin);
 };
