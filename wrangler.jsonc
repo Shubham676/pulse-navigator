@@ -5,6 +5,14 @@
   "main": "cloudflare/worker.js",
   "compatibility_date": "2026-11-01",
   "workers_dev": true,
-  // ORIGIN (the Render address) is set in the Cloudflare dashboard; keep it on every deploy
-  "keep_vars": true
+  "preview_urls": false,
+  "vars": {
+    // The Render address of the app server
+    "ORIGIN": "https://pulse-navigator.onrender.com"
+  },
+  // Only these paths reach the Worker; the rest of www.dumbledo.com (the Shopify store) never does.
+  // Routes only take effect while the www DNS record is proxied (orange cloud) in Cloudflare.
+  "routes": [
+    { "pattern": "www.dumbledo.com/pulse-navigator*", "zone_name": "dumbledo.com" }
+  ]
 }
