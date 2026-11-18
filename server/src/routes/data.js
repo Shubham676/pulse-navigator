@@ -2,6 +2,7 @@
 // Heavy lifting is done in SQL; the browser does the period comparisons and charts.
 import { many, one } from "../db.js";
 import { requireAuth, requireOrg } from "../lib/auth.js";
+import { shopifyFeed, mergeShopify } from "./shopify-feed.js";
 
 const IST = "Asia/Kolkata";
 
@@ -75,15 +76,17 @@ export async function loadData(org) {
     P(`select sku, marketplace, external_id from product_links where org_id=$1`),
     P(`select kind, status, last_sync_at, last_error, config from connections where org_id=$1`)
   ]);
+  const shop = await shopifyFeed(id);
   const orgRow = await one("select name, marketplace, target_acos, fee_rate, wallet_paise, billing_name, billing_gstin, billing_state_code, billing_address from orgs where id=$1", [id]);
-  return {
+  return mergeShopify({
     asOf: new Date().toISOString(),
     org: { id, name: orgRow.name, marketplace: orgRow.marketplace, targetAcos: orgRow.target_acos, feeRate: orgRow.fee_rate, wallet: orgRow.wallet_paise / 100,
       billing: { name: orgRow.billing_name, gstin: orgRow.billing_gstin, stateCode: orgRow.billing_state_code, address: orgRow.billing_address } },
     products, daily, dayOrders, dayReturns, hourly, dowHour, heat7, orders, returns, geo, splits,
     campaigns, adDaily, terms, placements, coupons, deals, health, txBuckets, txSku, repeat, traffic, trafficDay, imports, trackers, dayparts, memory, changes, negatives, links,
-    connections: conns.map(c => ({ kind: c.kind, status: c.status, lastSync: c.last_sync_at, error: c.last_error, account: c.config?.accountName || null }))
-  };
+    connections: conns.map(c => ({ kind: c.kind, status: c.status, lastSync: c.last_sync_at, error: c.last_error, account: c.config?.accountName || null })),
+    channels: { amazon: daily.length > 0 || products.length > 0, shopify: false }
+  }, shop);
 }
 
 export default async function dataRoutes(app) {

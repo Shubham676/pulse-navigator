@@ -2,6 +2,21 @@
 
 Newest first. The version and date also show at the bottom of the app's side menu.
 
+## 1.5.0 (18 Nov 2026)
+
+- Shopify data now flows into every Sales, Inventory and Business page, alongside Amazon:
+  - **Sales:** Shipped orders, Cancellations, Returns (Shopify refunds), Sales analysis, Sales projection and the Overview count Shopify orders, units and revenue. A product sold on both channels is added up on the same row.
+  - **Coupons:** Shopify discount codes, with orders, discount given and sales.
+  - **Deals and promotions:** Shopify products on sale (price below the compare-at price), with units and revenue in the last 30 days.
+  - **Repeat purchase:** Shopify repeat customers per product over the last 12 months.
+  - **Inventory dashboard, Inventory projection, Product master:** Shopify products with price, cost and stock (stock counts as own warehouse). For a SKU also on Amazon, Amazon details are kept and Shopify fills in missing cost or stock.
+  - **Standard report, Weekly comparison, Time sheet:** include Shopify orders.
+  - **Profit and loss:** Shopify sales shown separately, with payment gateway fees estimated at 2% (Amazon fees unchanged).
+- States from Shopify (province codes such as KA) are shown by name, so they combine with Amazon states.
+- Variants without a SKU appear as SHOP-<variant number>.
+- Shopify refunds are dated when the order last changed, because Shopify's refund date is not stored per item.
+- Top bar shows "Data to <date>" for Shopify-only brands.
+
 ## 1.4.0 (18 Nov 2026)
 
 - New page **Analytics › Sales › All orders**: every Amazon and Shopify order in one list, newest first. Filter by channel, status (open, shipped, cancelled, returned or refunded), period or custom dates (Indian time), and search by order number, SKU, product, city or state. 50 orders per page.

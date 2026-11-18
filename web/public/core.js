@@ -37,7 +37,7 @@ function shape(D) {
   const mk = n => Array.from({ length: n }, (_, i) => {
     const date = new Date(TODAY.getTime() - (n - 1 - i) * 864e5), ds = ymdIST(date);
     const rows = [...skuSet].map(sku => { const r = byDaySku.get(key(ds, sku)); return { sku, units: r?.units || 0, rev: r?.rev || 0, canc: r?.canc || 0, ret: ret.get(key(ds, sku)) || 0 }; });
-    return { date, ds, rows, units: sum(rows.map(r => r.units)), rev: sum(rows.map(r => r.rev)), ret: sum(rows.map(r => r.ret)), canc: sum(rows.map(r => r.canc)), orders: ord.get(ds)?.orders || 0, cancelled: ord.get(ds)?.cancelled || 0 };
+    return { date, ds, rows, units: sum(rows.map(r => r.units)), rev: sum(rows.map(r => r.rev)), ret: sum(rows.map(r => r.ret)), canc: sum(rows.map(r => r.canc)), orders: ord.get(ds)?.orders || 0, cancelled: ord.get(ds)?.cancelled || 0, shopRev: ord.get(ds)?.shopRev || 0 };
   });
   DAILY = mk(DAYS); LONG = mk(400);
   const last30 = new Map(); DAILY.slice(-30).forEach(d => d.rows.forEach(r => { const x = last30.get(r.sku) || { u: 0, rev: 0, ret: 0, canc: 0 }; x.u += r.units; x.rev += r.rev; x.ret += r.ret; x.canc += r.canc; last30.set(r.sku, x); }));
@@ -48,7 +48,7 @@ function shape(D) {
     return { sku, asin: p.asin, name: p.name || sku, cat: p.category || "Uncategorised", price, cogs: p.cogs, img: colorOf(sku), fba: p.fba_qty || 0, fbm: p.fbm_qty || 0, daily: m.u / 30,
       retRate: m.u ? m.ret / m.u : 0, cancelRate: m.u + m.canc ? m.canc / (m.u + m.canc) : 0, rating: p.rating, reviews: p.reviews, images: p.images, bullets: p.bullets, aplus: p.has_aplus,
       mapped: [D.org.marketplace, ...(links.get(sku) || [])], suppressed: p.status === "Suppressed" ? (p.suppressed_reason || "Suppressed") : null, status: p.status, inventoryAsOf: p.inventory_as_of,
-      sessions: traffic.get(sku)?.sessions ?? null, buyBox: traffic.get(sku)?.buy_box ?? null, titleLength: p.title_length };
+      sessions: traffic.get(sku)?.sessions ?? null, buyBox: traffic.get(sku)?.buy_box ?? null, titleLength: p.title_length, channel: p.channel || "amazon" };
   });
   CAMPAIGNS = D.campaigns.map(c => ({ ...c, budget: c.budget || 0, start: c.start ? new Date(c.start) : null }));
   SEARCH_TERMS = D.terms.map(t => ({ ...t, bid: t.clicks ? t.spend / t.clicks : 0 }));
@@ -142,7 +142,7 @@ function render() {
   catch (e) { console.error(e); $("page").innerHTML = `<section class="card empty-state"><h3>This page could not be shown</h3><p>${esc(e.message)}</p></section>`; }
   $("walBal").textContent = inr(S.D.org.wallet);
   const o = S.D.imports.find(i => i.report === "orders");
-  $("fresh").textContent = o ? `Data to ${fmtD(S.D.daily.reduce((m, r) => r.d > m ? r.d : m, "2000-01-01"))}` : "No data yet";
+  $("fresh").textContent = (o || S.D.channels?.shopify) && S.D.daily.length ? `Data to ${fmtD(S.D.daily.reduce((m, r) => r.d > m ? r.d : m, "2000-01-01"))}` : "No data yet";
   if (r.h === "copilot") { const m = $("msgs"); if (m) m.scrollTop = m.scrollHeight; }
 }
 addEventListener("hashchange", () => { render(); $("work").scrollTop = 0; });
