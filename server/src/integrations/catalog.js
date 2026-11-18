@@ -1,5 +1,5 @@
 // Every platform shown under Connections. "access" says how far the connection goes today:
-//   live    – full sync built in (Amazon; handled on its own page)
+//   live    – full sync built in (Amazon and Shopify; handled on the Account › Amazon and Shopify page)
 //   api     – credentials are saved and checked against the platform's API ("Test connection")
 //   keys    – credentials are saved securely; data sync for this platform is not built yet
 //   partner – the platform gives API access only to approved partners; save seller details, use webhooks meanwhile
@@ -41,10 +41,8 @@ export const PLATFORMS = [
   partner("instamart", "Swiggy Instamart", "Quick commerce", "#FC8019", "SI"),
   partner("bigbasket", "BigBasket", "Quick commerce", "#84C225", "bb"),
 
-  { id: "shopify", name: "Shopify", category: "Your own store", color: "#5E8E3E", letters: "S", access: "api", webhook: "shopify",
-    fields: [T("shop", "Store address", { placeholder: "yourstore.myshopify.com" }), S("access_token", "Admin API access token", { placeholder: "shpat_…" }),
-      S("api_secret", "API secret key (used to verify webhooks)", { required: false })],
-    note: "In Shopify admin: Settings → Apps and sales channels → Develop apps → create an app with read access to orders, products and inventory, then install it." },
+  { id: "shopify", name: "Shopify", category: "Your own store", color: "#5E8E3E", letters: "S", access: "live", fields: [], webhook: null,
+    note: "Orders, products, prices and stock sync every few hours, with a Shopify store page under Analytics." },
   { id: "woocommerce", name: "WooCommerce", category: "Your own store", color: "#7F54B3", letters: "Wo", access: "api", webhook: "woocommerce",
     fields: [U("store_url", "Store address", { placeholder: "https://yourstore.com" }), S("consumer_key", "Consumer key", { placeholder: "ck_…" }),
       S("consumer_secret", "Consumer secret", { placeholder: "cs_…" }), S("webhook_secret", "Webhook secret (used to verify webhooks)", { required: false })],

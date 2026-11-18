@@ -31,13 +31,6 @@ async function call(url, init = {}, what = "the platform") {
 const basic = (a, b) => "Basic " + Buffer.from(`${a}:${b}`).toString("base64");
 
 export const TESTERS = {
-  async shopify(f) {
-    const shop = String(f.shop || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-    if (!testMode() && !/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shop)) throw new Error("Use your store's myshopify.com address, for example yourstore.myshopify.com.");
-    const base = testMode() && process.env.SHOPIFY_TEST_BASE ? process.env.SHOPIFY_TEST_BASE : `https://${shop}`;
-    const d = await call(`${base}/admin/api/2025-10/shop.json`, { headers: { "X-Shopify-Access-Token": f.access_token, accept: "application/json" } }, "Shopify");
-    return `Connected to ${d.shop?.name || shop}.`;
-  },
   async woocommerce(f) {
     const u = safeUrl(f.store_url);
     const d = await call(new URL("/wp-json/wc/v3/system_status", u), { headers: { authorization: basic(f.consumer_key, f.consumer_secret), accept: "application/json" } }, "WooCommerce");

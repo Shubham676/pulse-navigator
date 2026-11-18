@@ -25,10 +25,11 @@ function logoTile(p, size = 44) {
   const c = p.color.replace("#", ""), [r, g, b] = [0, 2, 4].map(i => parseInt(c.slice(i, i + 2), 16)), light = (r * 299 + g * 587 + b * 114) / 1000 > 160;
   return `<span class="clogo" aria-hidden="true" style="width:${size}px;height:${size}px;background:${esc(p.color)};color:${light ? "#1B1F1E" : "#fff"};font-size:${Math.round(size * (p.letters.length > 1 ? .36 : .46))}px">${esc(p.letters)}</span>`;
 }
-function amazonStatus() {
-  const c = S.conns?.connections || [], sp = c.find(x => x.kind === "sp_api"), ad = c.find(x => x.kind === "ads_api");
-  if (!sp && !ad) return null;
-  return (sp?.last_error || ad?.last_error) ? "error" : "connected";
+// Amazon and Shopify sync fully and live on the Account › Amazon and Shopify page
+function liveStatus(id) {
+  const c = S.conns?.connections || [], mine = c.filter(x => (id === "amazon" ? ["sp_api", "ads_api"] : [id]).includes(x.kind));
+  if (!mine.length) return null;
+  return mine.some(x => x.last_error) ? "error" : "connected";
 }
 function statusPill(st) {
   return st === "connected" ? `<span class="pill ok">Connected</span>` : st === "error" ? `<span class="pill bad">Needs attention</span>` : st === "saved" ? `<span class="pill info">Saved</span>` : `<span class="pill mut">Not connected</span>`;
@@ -37,7 +38,7 @@ function statusPill(st) {
 VIEWS["connections"] = arg => {
   if (!intLoad()) return `<div class="empty">Loading connections…</div>`;
   if (arg) return connectionPage(arg);
-  const P = S.intCat.platforms, st = p => p.id === "amazon" ? amazonStatus() : intOf(p.id)?.status;
+  const P = S.intCat.platforms, st = p => p.access === "live" ? liveStatus(p.id) : intOf(p.id)?.status;
   const q = (S.intQ || "").toLowerCase(), shown = P.filter(p => !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
   const counts = { connected: P.filter(p => st(p) === "connected").length, saved: P.filter(p => st(p) === "saved").length, error: P.filter(p => st(p) === "error").length };
   const events = (S.ints.integrations || []).reduce((n, i) => n + i.events, 0);
@@ -50,7 +51,7 @@ VIEWS["connections"] = arg => {
       if (!list.length) return "";
       return `<h3 class="csec">${esc(cat)}</h3><div class="ctiles">${list.map(p => {
         const [al, ac] = ACCESS[p.access];
-        return `<a class="ctile" href="#${p.id === "amazon" ? "account-channels" : "connections-" + p.id}">${logoTile(p)}<span class="cname"><b>${esc(p.name)}</b><span class="cpills"><span class="pill ${ac}">${al}</span>${statusPill(st(p))}</span></span></a>`;
+        return `<a class="ctile" href="#${p.access === "live" ? "account-channels" : "connections-" + p.id}">${logoTile(p)}<span class="cname"><b>${esc(p.name)}</b><span class="cpills"><span class="pill ${ac}">${al}</span>${statusPill(st(p))}</span></span></a>`;
       }).join("")}</div>`;
     }).join("")
     + (shown.length ? "" : `<div class="empty">No platform matches “${esc(S.intQ)}”. Use <a href="#connections-webhook_in">Incoming webhook</a> to connect any other system.</div>`)
@@ -60,7 +61,7 @@ VIEWS["connections"] = arg => {
 function connectionPage(id) {
   const p = S.intCat.platforms.find(x => x.id === id);
   if (!p) return head("Not found", "") + `<a href="#connections">Back to connections</a>`;
-  if (p.id === "amazon") { location.hash = "account-channels"; return ""; }
+  if (p.access === "live") { location.hash = "account-channels"; return ""; }
   const it = intOf(p.id), [al, ac, ad] = ACCESS[p.access], admin = isAdmin();
   if (it && p.webhook && canEdit() && !(S.intEvents || {})[p.id]) {
     S.intEvents = S.intEvents || {}; S.intEvents[p.id] = { loading: true };

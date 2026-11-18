@@ -4,13 +4,13 @@ import http from "node:http";
 import crypto from "node:crypto";
 import { setup } from "./helpers.js";
 
-// Mock Shopify Admin API and an outgoing-webhook receiver
+// Mock WooCommerce REST API and an outgoing-webhook receiver
 const received = [];
 const mock = http.createServer((req, res) => {
   let b = ""; req.on("data", c => (b += c)); req.on("end", () => {
-    if (req.url === "/admin/api/2025-10/shop.json") {
-      if (req.headers["x-shopify-access-token"] !== "shpat_good") { res.writeHead(401); return res.end("{}"); }
-      res.writeHead(200, { "content-type": "application/json" }); return res.end(JSON.stringify({ shop: { name: "Dumbledo Test Store" } }));
+    if (req.url === "/wp-json/wc/v3/system_status") {
+      if (req.headers.authorization !== "Basic " + Buffer.from("ck_good:cs_good").toString("base64")) { res.writeHead(401); return res.end("{}"); }
+      res.writeHead(200, { "content-type": "application/json" }); return res.end(JSON.stringify({ environment: { site_url: "https://dumbledo-test.store" } }));
     }
     if (req.url === "/hook") { received.push({ headers: req.headers, body: b }); res.writeHead(200); return res.end("ok"); }
     res.writeHead(404); res.end();
@@ -20,7 +20,6 @@ let t, u, base;
 before(async () => {
   await new Promise(r => mock.listen(0, "127.0.0.1", r));
   base = `http://127.0.0.1:${mock.address().port}`;
-  process.env.SHOPIFY_TEST_BASE = base;
   t = await setup();
   u = await t.signup("hub@example.com", "Hub Brand");
 });
@@ -33,7 +32,8 @@ test("catalog lists marketplaces, stores, shipping and custom connections", asyn
   assert.ok(c.platforms.length >= 30);
   for (const id of ["amazon", "flipkart", "meesho", "shopify", "woocommerce", "blinkit", "shiprocket", "webhook_in", "webhook_out"]) assert.ok(c.platforms.find(p => p.id === id), id);
   assert.equal(c.platforms.find(p => p.id === "amazon").access, "live");
-  assert.ok(c.platforms.find(p => p.id === "shopify").testable);
+  assert.equal(c.platforms.find(p => p.id === "shopify").access, "live", "Shopify has its own full sync");
+  assert.ok(c.platforms.find(p => p.id === "woocommerce").testable);
   assert.ok(c.categories.includes("Quick commerce"));
 });
 
@@ -56,25 +56,25 @@ test("partner platform: saved with masked secrets, a webhook address and a signi
   assert.equal(r.json().integration.settings.seller_id, "MS-124");
 });
 
-test("shopify: good token connects, bad token is reported in plain words", async () => {
-  let r = await u.req("PUT", "/api/integrations/shopify", { fields: { shop: "dumbledo.myshopify.com", access_token: "shpat_bad", api_secret: "shp-secret" } });
+test("woocommerce: good keys connect, bad keys are reported in plain words", async () => {
+  let r = await u.req("PUT", "/api/integrations/woocommerce", { fields: { store_url: base, consumer_key: "ck_bad", consumer_secret: "cs_bad", webhook_secret: "woo-secret" } });
   assert.equal(r.json().status, "error");
   assert.match(r.json().message, /refused the credentials/);
-  r = await u.req("PUT", "/api/integrations/shopify", { fields: { shop: "dumbledo.myshopify.com", access_token: "shpat_good" } });
+  r = await u.req("PUT", "/api/integrations/woocommerce", { fields: { store_url: base, consumer_key: "ck_good", consumer_secret: "cs_good" } });
   assert.equal(r.json().status, "connected", r.body);
-  assert.match(r.json().message, /Dumbledo Test Store/);
-  assert.equal(r.json().integration.secrets.api_secret, "••••cret", "api secret kept from the first save");
+  assert.match(r.json().message, /dumbledo-test.store/);
+  assert.equal(r.json().integration.secrets.webhook_secret, "••••cret", "webhook secret kept from the first save");
 });
 
-test("inbound webhooks: shopify HMAC checked, generic signed and unsigned events stored", async () => {
+test("inbound webhooks: WooCommerce signature checked, generic signed and unsigned events stored", async () => {
   const list = (await u.req("GET", "/api/integrations")).json().integrations;
-  const shop = list.find(i => i.platform === "shopify"), mee = list.find(i => i.platform === "meesho");
+  const woo = list.find(i => i.platform === "woocommerce"), mee = list.find(i => i.platform === "meesho");
   const path = url => new URL(url).pathname;
-  const body = JSON.stringify({ id: 1, total_price: "799.00" });
-  const good = crypto.createHmac("sha256", "shp-secret").update(body).digest("base64");
-  let r = await post(path(shop.webhookUrl), body, { "x-shopify-topic": "orders/create", "x-shopify-hmac-sha256": "bad" });
+  const body = JSON.stringify({ id: 1, total: "799.00" });
+  const good = crypto.createHmac("sha256", "woo-secret").update(body).digest("base64");
+  let r = await post(path(woo.webhookUrl), body, { "x-wc-webhook-topic": "order.created", "x-wc-webhook-signature": "bad" });
   assert.equal(r.statusCode, 401);
-  r = await post(path(shop.webhookUrl), body, { "x-shopify-topic": "orders/create", "x-shopify-hmac-sha256": good });
+  r = await post(path(woo.webhookUrl), body, { "x-wc-webhook-topic": "order.created", "x-wc-webhook-signature": good });
   assert.equal(r.statusCode, 200, r.body);
 
   const ev = JSON.stringify({ event: "order.created", order: "MS-1" });
@@ -91,7 +91,7 @@ test("inbound webhooks: shopify HMAC checked, generic signed and unsigned events
 
   const events = (await u.req("GET", "/api/integrations/events")).json().events;
   assert.equal(events.length, 4);
-  assert.deepEqual(events.map(e => [e.platform, e.topic, e.verified]), [["meesho", null, false], ["meesho", "order.created", true], ["meesho", "order.created", false], ["shopify", "orders/create", true]]);
+  assert.deepEqual(events.map(e => [e.platform, e.topic, e.verified]), [["meesho", null, false], ["meesho", "order.created", true], ["meesho", "order.created", false], ["woocommerce", "order.created", true]]);
   assert.equal(events[0].body_text, "hello");
   assert.equal((await u.req("GET", "/api/integrations")).json().integrations.find(i => i.platform === "meesho").events, 3);
 });
@@ -113,4 +113,5 @@ test("rotate gives a new webhook address; disconnect removes it", async () => {
   assert.equal((await u.req("DELETE", "/api/integrations/meesho", {})).statusCode, 200);
   assert.equal((await post(new URL(after).pathname, "{}")).statusCode, 404);
   assert.equal((await u.req("PUT", "/api/integrations/amazon", { fields: {} })).statusCode, 404, "Amazon uses its own page");
+  assert.equal((await u.req("PUT", "/api/integrations/shopify", { fields: {} })).statusCode, 404, "Shopify uses its own page");
 });
