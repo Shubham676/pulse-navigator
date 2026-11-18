@@ -12,6 +12,8 @@
   },
   // Only these paths reach the Worker; the rest of www.dumbledo.com (the Shopify store) never does.
   // Routes only take effect while the www DNS record is proxied (orange cloud) in Cloudflare.
+  // Every 10 minutes: ping the Render server so the free plan never puts it to sleep
+  "triggers": { "crons": ["*/10 * * * *"] },
   "routes": [
     { "pattern": "www.dumbledo.com/pulse-navigator*", "zone_name": "dumbledo.com" }
   ]

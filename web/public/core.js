@@ -15,7 +15,7 @@ async function api(method, url, body, { raw } = {}) {
   if (raw) return res;
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && !url.startsWith("/api/auth")) { showAuth("login"); throw new Error(data.error || "Please sign in."); }
-  if (!res.ok) { const e = new Error(data.error || `Request failed (${res.status})`); e.code = data.code; e.status = res.status; throw e; }
+  if (!res.ok) { const e = new Error(data.error || ([502, 503, 504].includes(res.status) ? "Pulse Navigator is starting up. Please try again in a minute." : `Request failed (${res.status})`)); e.code = data.code; e.status = res.status; throw e; }
   return data;
 }
 
