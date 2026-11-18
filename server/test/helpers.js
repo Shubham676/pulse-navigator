@@ -2,6 +2,7 @@
 export async function setup({ mockBase } = {}) {
   process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || "postgres://pulse@localhost:5433/pulse_test?host=/tmp";
   process.env.AMAZON_POLL_MS = "20";
+  process.env.NODE_ENV = "test";
   if (mockBase) {
     Object.assign(process.env, { AMAZON_LWA_TOKEN_URL: mockBase + "/auth/o2/token", AMAZON_ADS_TOKEN_URL: mockBase + "/auth/o2/token", AMAZON_SP_API_ENDPOINT: mockBase, AMAZON_ADS_API_ENDPOINT: mockBase });
   }

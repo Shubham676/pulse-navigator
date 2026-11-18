@@ -2,13 +2,22 @@
 
 Newest first. The version and date also show at the bottom of the app's side menu.
 
+## 1.3.0 (18 Nov 2026)
+
+- New **Connections** menu in the left bar: 34 platforms in one place, grouped as Indian marketplaces, quick commerce, your own store, global marketplaces, shipping and order management, and custom connections. Search by name.
+- Amazon and Shopify are marked "Live sync" and open their existing connection page (now called **Account › Amazon and Shopify**).
+- Every other platform has its own page to save API credentials (stored encrypted, never shown again in full). "Test connection" checks them against the platform's API for WooCommerce, Flipkart, BigCommerce, Adobe Commerce (Magento), Shiprocket and outgoing webhooks.
+- Every connection gets its own webhook address. WooCommerce signatures are verified; other platforms can sign with the connection's signing secret (header X-Pulse-Signature). Events are listed under Connections › Webhook events.
+- Incoming webhook (any system) and outgoing webhook (Pulse sends signed events to your URL).
+- Logos: add official logo files as web/public/logos/<platform>.svg; until then each platform shows a lettermark.
+
 ## 1.2.0 (18 Nov 2026)
 
 - Shopify connection (Account › Connections). Connect with a Shopify Dev Dashboard app's client ID and secret (client credentials grant, token renewed every 24 hours), or an older custom app's `shpat_` token. Read only.
 - Syncs every few hours: orders with line items, discounts, shipping, tax, refunds, cancellations and COD or prepaid; all product variants with price, MRP, cost and stock. First sync goes back a year (needs `read_all_orders`, otherwise 60 days); later syncs fetch only changed orders.
 - New page Analytics › Own store › Shopify store: net sales, orders, average order, COD share, daily sales, top products, payment mix, discount codes, orders by state, repeat customers, products with days of stock, recent orders.
 - Shopify SKUs that match Amazon SKUs are linked in the product master.
-- "Amazon connections" renamed "Connections".
+- "Amazon connections" renamed "Connections" (renamed "Amazon and Shopify" in 1.3.0).
 
 ## 1.1.1 (18 Nov 2026)
 

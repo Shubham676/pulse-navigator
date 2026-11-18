@@ -104,6 +104,15 @@ document.addEventListener("click", async e => {
     case "disconnect": confirmModal("Disconnect?", `<p style="margin:0">Pulse stops pulling data from this account. Data already imported stays.</p>`, "Disconnect", async btn => { if (await act(() => api("DELETE", `/api/connections/${d.id}`), btn, "Disconnected")) { closeModal(); S.conns = null; S.shop = null; render(); } }); break;
     case "delmem": if (await act(() => api("DELETE", `/api/memory/${d.id}`))) await reload(true); break;
     case "rmmember": confirmModal("Remove from brand?", `<p style="margin:0">They lose access to ${esc(S.D.org.name)} straight away.</p>`, "Remove", async btn => { if (await act(() => api("DELETE", `/api/team/${d.id}`), btn, "Removed")) { closeModal(); S.team = null; render(); } }); break;
+    case "copy": { const el = $(d.copy); if (el) navigator.clipboard.writeText(el.value).then(() => toast("Copied"), () => { el.type = "text"; el.select(); toast("Select it and copy"); }); break; }
+    case "intshow": { const el = $("intSecret"); el.type = el.type === "password" ? "text" : "password"; b.textContent = el.type === "password" ? "Show" : "Hide"; break; }
+    case "inttest": { const r = await act(() => api("POST", `/api/integrations/${d.id}/test`), b); if (r) { toast(r.message); intReset(); render(); } break; }
+    case "intdel": confirmModal("Disconnect?", "The saved credentials and webhook address are deleted. Events already received are deleted too.", "Disconnect", async yb => { const r = await act(() => api("DELETE", `/api/integrations/${d.id}`), yb, "Disconnected"); if (r) { closeModal(); intReset(); render(); } }); break;
+    case "introtate": confirmModal("Get a new webhook address?", "The current address and signing secret stop working immediately. Update them wherever you set them up.", "Get new address", async yb => { const r = await act(() => api("POST", `/api/integrations/${d.id}/rotate`), yb, "New address ready"); if (r) { closeModal(); intReset(); render(); } }); break;
+    case "intrefresh": S.intAllEvents = null; render(); break;
+    case "viewevent": { const all = [...(S.intAllEvents?.events || []), ...Object.values(S.intEvents || {}).flatMap(x => x.events || [])], ev = all.find(x => String(x.id) === d.id);
+      if (ev) modal(`<button type="button" class="btn sm ghost x" data-act="close" aria-label="Close">✕</button><h3 id="mTitle">${esc(ev.topic || "Webhook event")}</h3><p class="note" style="margin-top:0">${fmtDT(ev.received_at)} · ${ev.verified ? "Signature verified" : "Not verified"}</p><pre class="lcd" style="max-height:60vh;overflow:auto;white-space:pre-wrap;word-break:break-word">${esc(ev.body ? JSON.stringify(ev.body, null, 2) : ev.body_text || "(empty)")}</pre>`);
+      break; }
     case "copyinvite": navigator.clipboard.writeText($("invLink").value).then(() => toast("Invite link copied"), () => toast("Select the link and copy it")); break;
     case "neworg": newOrgModal(); break;
     case "signout": await api("POST", "/api/auth/logout"); location.hash = ""; location.reload(); break;
@@ -144,6 +153,12 @@ document.addEventListener("submit", async e => {
   e.preventDefault();
   const f = e.target, id = f.id, v = x => ($(x) ? $(x).value.trim() : ""), btn = f.querySelector("button[type=submit]");
   if (id === "authForm") return submitAuth(f);
+  if (id === "intForm") {
+    const fields = Object.fromEntries([...f.querySelectorAll("input[name]")].map(i => [i.name, i.value]));
+    const r = await act(() => api("PUT", `/api/integrations/${f.dataset.platform}`, { fields }), btn);
+    if (r) { toast(r.message); intReset(); render(); }
+    return;
+  }
   if (id === "chatForm") { const q = v("chatIn"); $("chatIn").value = ""; return ask(q); }
   if (id === "trkForm") { const val = parseFloat(v("tkVal")); if (!v("tkName")) return toast("Give the tracker a name"); if (isNaN(val)) return toast("Enter a number for the value"); if (await act(() => api("POST", "/api/ads/trackers", { name: v("tkName"), metric: v("tkMet"), op: v("tkOp"), value: val }), btn)) { closeModal(); await reload(true); } return; }
   if (id === "dpForm") { const hours = [...$("modal").querySelectorAll('[data-hr][aria-pressed="true"]')].map(x => +x.dataset.hr).sort((a, b) => a - b); if (!hours.length) return toast("Pick at least one hour to switch off"); if (await act(() => api("POST", "/api/ads/dayparts", { campaignId: v("dpCamp"), days: v("dpDays"), hours }), btn, "Schedule saved")) { closeModal(); await reload(true); } return; }
@@ -171,3 +186,15 @@ $("userBtn").addEventListener("click", () => {
 $("themeBtn").addEventListener("click", () => { const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; r.dataset.theme = dark ? "light" : "dark"; try { localStorage.setItem("pulse.theme", r.dataset.theme); } catch (x) { /* ignore */ } });
 try { const th = localStorage.getItem("pulse.theme"); if (th) document.documentElement.dataset.theme = th; } catch (x) { /* ignore */ }
 boot();
+
+// Connections search: filter the tiles in place so typing keeps focus
+document.addEventListener("input", e => {
+  if (e.target.id !== "intSearch") return;
+  S.intQ = e.target.value;
+  const q = S.intQ.trim().toLowerCase();
+  document.querySelectorAll(".ctiles").forEach(g => {
+    let any = false;
+    g.querySelectorAll(".ctile").forEach(t => { const hit = !q || t.textContent.toLowerCase().includes(q) || g.previousElementSibling.textContent.toLowerCase().includes(q); t.hidden = !hit; any = any || hit; });
+    g.hidden = !any; g.previousElementSibling.hidden = !any;
+  });
+});
