@@ -6,7 +6,8 @@ import { requireAuth, requireOrg, canAdmin, canEdit, HttpError, audit, basePath 
 import { spClient, spCredentials } from "../amazon/spapi.js";
 import { adsClient, adsCredentials, ADS_TOKEN_URL } from "../amazon/ads.js";
 import { exchangeCode } from "../amazon/http.js";
-import { enqueue } from "../jobs/worker.js";
+import { enqueue, SYNC_JOB } from "../jobs/worker.js";
+import { checkShop, normalizeShop, ShopifyError } from "../shopify/client.js";
 
 const SP_APP_ID = process.env.AMAZON_SP_APP_ID || "";          // set when the public SP-API app is approved
 const SP_CONSENT = process.env.AMAZON_SP_CONSENT_URL || "https://sellercentral.amazon.in/apps/authorize/consent";
@@ -27,7 +28,7 @@ function checkState(state, nonce) {
 async function saveConnection(orgId, kind, cfg, secrets) {
   await q(`insert into connections (org_id, kind, config, secret_enc, status, last_error) values ($1,$2,$3,$4,'connected',null)
            on conflict (org_id, kind) do update set config=excluded.config, secret_enc=excluded.secret_enc, status='connected', last_error=null`, [orgId, kind, cfg, encrypt(secrets)]);
-  await enqueue(orgId, kind === "sp_api" ? "sp_sync" : "ads_sync");
+  await enqueue(orgId, SYNC_JOB[kind]);
 }
 
 async function pickAdsProfile(cred) {
@@ -41,7 +42,7 @@ export default async function connectionRoutes(app) {
   app.get("/api/connections", { preHandler: requireAuth }, async req => {
     requireOrg(req);
     const rows = await many("select kind, config, status, last_sync_at, last_error from connections where org_id=$1", [req.org.id]);
-    const jobs = await many("select kind, state, updated_at, result from jobs where org_id=$1 and kind in ('sp_sync','ads_sync') order by id desc limit 6", [req.org.id]);
+    const jobs = await many("select kind, state, updated_at, result from jobs where org_id=$1 and kind in ('sp_sync','ads_sync','shopify_sync') order by id desc limit 9", [req.org.id]);
     const health = await one("select as_of, source, metrics from account_health where org_id=$1 order by as_of desc limit 1", [req.org.id]);
     return { connections: rows, jobs, health, oauth: { sp: !!SP_APP_ID && !!config.amazon.lwaClientId, ads: !!config.amazon.adsClientId }, appConfigured: !!config.amazon.lwaClientId };
   });
@@ -71,6 +72,21 @@ export default async function connectionRoutes(app) {
     await saveConnection(req.org.id, "ads_api", { profileId: p.profileId, accountName: p.accountInfo?.name || "", countryCode: p.countryCode }, secrets);
     await audit(req, "connect.ads_api");
     return { ok: true, account: p.accountInfo?.name || p.profileId };
+  });
+
+  // Shopify: a Dev Dashboard app in the brand's own Shopify organization (client ID + secret),
+  // or an older admin-created custom app's Admin API access token (shpat_…)
+  app.post("/api/connections/shopify", { preHandler: requireAuth }, async req => {
+    canAdmin(req);
+    const b = z.object({ shop: z.string().trim().min(3, "Enter your store's myshopify.com address."), clientId: z.string().trim().optional(), clientSecret: z.string().trim().optional(), accessToken: z.string().trim().optional() }).parse(req.body);
+    let shop; try { shop = normalizeShop(b.shop); } catch (e) { throw new HttpError(400, e.message); }
+    const secrets = b.accessToken ? { accessToken: b.accessToken } : { clientId: b.clientId, clientSecret: b.clientSecret };
+    if (!b.accessToken && (!b.clientId || !b.clientSecret)) throw new HttpError(400, "Enter the app's client ID and client secret from the Shopify Dev Dashboard (or an Admin API access token).");
+    let info;
+    try { info = await checkShop({ shop, ...secrets }); } catch (e) { throw new HttpError(e instanceof ShopifyError && e.status < 500 ? 400 : 502, e.message); }
+    await saveConnection(req.org.id, "shopify", { shop: info.myshopifyDomain || shop, accountName: info.name, domain: info.primaryDomain?.host || null, currency: info.currencyCode }, secrets);
+    await audit(req, "connect.shopify", { shop });
+    return { ok: true, account: info.name, domain: info.primaryDomain?.host || shop };
   });
 
   // OAuth: public app flows, used once our apps are approved by Amazon
@@ -112,7 +128,7 @@ export default async function connectionRoutes(app) {
 
   app.post("/api/connections/:kind/sync", { preHandler: requireAuth }, async req => {
     canEdit(req);
-    const kind = { "sp-api": "sp_sync", "ads-api": "ads_sync" }[req.params.kind];
+    const kind = { "sp-api": "sp_sync", "ads-api": "ads_sync", "shopify": "shopify_sync" }[req.params.kind];
     if (!kind) throw new HttpError(404, "Unknown connection.");
     if (!await one("select 1 from connections where org_id=$1 and kind=$2", [req.org.id, req.params.kind.replace("-", "_")])) throw new HttpError(400, "Connect the account first.");
     const queued = await enqueue(req.org.id, kind);
